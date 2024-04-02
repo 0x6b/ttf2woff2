@@ -1,0 +1,33 @@
+# ttf2woff2-rs
+
+TTF font to WOFF2 compressor. Output is compatible with [google/woff2](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) (`woff2_compress` command).
+
+## Prerequisites
+
+- Linux (tested on Ubuntu 22.04.4 LTS): `sudo apt install -y libbrotli-dev, g++`
+- macOS (tested on Sonoma 14.4): `brew install brotli`
+
+## Build
+
+```console
+$ cargo build --release
+```
+
+## Usage
+
+```console
+Usage: ttf2woff2-rs [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>  Path to the input TTF file
+
+Options:
+  -o, --output <OUTPUT>    Path to the output WOFF2 file. Defaults to the name of the input file with a .woff2 extension
+  -q, --quality <QUALITY>  Brotli quality, between 0 and 11 inclusive [default: 11]
+  -h, --help               Print help
+```
+
+## License
+
+- The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font for [testing](tests) in the repository is licensed under its own license. See [OFL.txt](OFL.txt) for details.
+- Other files are licensed under the MIT. See [LICENSE](LICENSE) for details.
