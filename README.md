@@ -31,3 +31,8 @@ Options:
 
 - The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font for [testing](tests) in the repository is licensed under its own license. See [OFL.txt](OFL.txt) for details.
 - Other files are licensed under the MIT. See [LICENSE](LICENSE) for details.
+
+## Acknowledgements
+
+- [lemonrock/woff2-sys: Rust FFI bindings to Google's woff2 library](https://github.com/lemonrock/woff2-sys)
+- [thibault-cne/woff2: An FFI biding to the google woff2 library in Rust.](https://github.com/thibault-cne/woff2)
