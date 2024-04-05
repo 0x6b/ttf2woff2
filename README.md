@@ -1,6 +1,6 @@
 # ttf2woff2-rs
 
-TTF font to WOFF2 compressor. Output is compatible with [google/woff2](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) (`woff2_compress` command).
+Library and binary for compressing TTF fonts to WOFF2 format. The output is compatible with [google/woff2](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) (via the `woff2_compress` command).
 
 ## Prerequisites
 
