@@ -1,7 +1,9 @@
-use std::{env::var, path::PathBuf};
+use std::{env::var, error::Error, path::PathBuf};
 
-fn main() -> anyhow::Result<()> {
-    let lib = pkg_config::probe_library("libbrotlienc").expect("Could not find brotli");
+use pkg_config::probe_library;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let lib = probe_library("libbrotlienc").expect("Could not find brotli");
 
     let root = PathBuf::from(var("CARGO_MANIFEST_DIR")?);
     let woff2_root = root.join("woff2");
