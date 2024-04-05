@@ -3,7 +3,13 @@ name = "ttf2woff2-rs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "ttf2woff2"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ttf2woff2"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.81"
@@ -24,4 +30,4 @@ cpp_build = "0.5.9"
 pkg-config = "0.3.30"
 
 [dev-dependencies]
-sha2 = "0.10.8"
+sha2 = "0.11.0-pre.3"

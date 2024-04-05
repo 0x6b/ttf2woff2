@@ -1,9 +1,10 @@
-use std::{fs::File, io::copy, path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use sha2::{Digest, Sha256};
-use ttf2woff2_rs::{BrotliQuality, Converter};
+use tokio::fs::read;
+use ttf2woff2::{BrotliQuality, Converter};
 
 #[tokio::test]
 async fn test() -> Result<()> {
@@ -19,19 +20,23 @@ async fn test() -> Result<()> {
     assert_eq!(input_size, 5_729_332);
     assert_eq!(output_size, 2_322_664);
     assert_eq!(
-        calculate_hash(output)?,
+        calculate_hash(output).await?,
         "507421faf0310dae65c695f305b651379384f69a984dd04efdebdc999f96427a"
     );
 
     Ok(())
 }
 
-fn calculate_hash<P>(path: P) -> Result<String>
+async fn calculate_hash<P>(path: P) -> Result<String>
 where
     P: AsRef<Path>,
 {
-    let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
-    copy(&mut file, &mut hasher)?;
-    Ok(format!("{:x}", hasher.finalize()))
+    hasher.update(read(&path).await?);
+    let hash = hasher.finalize();
+    let hex = hash.iter().fold(String::new(), |mut output, b| {
+        output.push_str(&format!("{b:02x}"));
+        output
+    });
+    Ok(hex)
 }

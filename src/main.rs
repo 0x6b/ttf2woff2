@@ -1,5 +1,5 @@
 use log::info;
-use ttf2woff2_rs::Converter;
+use ttf2woff2::Converter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
