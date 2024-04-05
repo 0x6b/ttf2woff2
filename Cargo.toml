@@ -2,7 +2,7 @@
 name = "ttf2woff2-rs"
 version = "0.1.0"
 edition = "2021"
-description = "A Rust library and CLI for for compressing TTF fonts to WOFF2 format."
+description = "A Rust library and CLI for for compressing a TTF font to WOFF2 format."
 authors = ["kaoru <k@warpnine.io>"]
 license = "MIT"
 homepage = "https://github.com/0x6b/ttf2woff2-rs"
