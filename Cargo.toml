@@ -1,12 +1,12 @@
 [package]
-name = "ttf2woff2-rs"
+name = "ttf2woff2"
 version = "0.1.0"
 edition = "2021"
 description = "A Rust library and CLI for for compressing a TTF font to WOFF2 format."
 authors = ["kaoru <k@warpnine.io>"]
 license = "MIT"
-homepage = "https://github.com/0x6b/ttf2woff2-rs"
-repository = "https://github.com/0x6b/ttf2woff2-rs"
+homepage = "https://github.com/0x6b/ttf2woff2"
+repository = "https://github.com/0x6b/ttf2woff2"
 readme = "README.md"
 categories = ["text-processing"]
 keywords = ["fonts", "cli", "woff2", "ttf", "font-conversion"]

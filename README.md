@@ -1,4 +1,4 @@
-# ttf2woff2-rs
+# ttf2woff2
 
 A Rust library and CLI for compressing a TTF font to WOFF2 format. The output is compatible with [google/woff2](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) (via the `woff2_compress` command).
 
@@ -16,7 +16,7 @@ $ cargo build --release
 ## Usage
 
 ```console
-Usage: ttf2woff2-rs [OPTIONS] <INPUT>
+Usage: ttf2woff2 [OPTIONS] <INPUT>
 
 Arguments:
   <INPUT>  Path to the input TTF file
