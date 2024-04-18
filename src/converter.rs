@@ -48,6 +48,14 @@ impl Converter<Uninitialized> {
             return Err(Error::InvalidFileName(input.to_string()).into());
         }
 
+        Self::from(input, output, quality).await
+    }
+
+    pub async fn from(
+        input: Utf8PathBuf,
+        output: Option<Utf8PathBuf>,
+        quality: BrotliQuality,
+    ) -> Result<Converter<Loaded>> {
         let output = match output {
             None => {
                 let mut output = input.clone();
@@ -57,14 +65,6 @@ impl Converter<Uninitialized> {
             Some(o) => o,
         };
 
-        Self::from(input, output, quality).await
-    }
-
-    pub async fn from(
-        input: Utf8PathBuf,
-        output: Utf8PathBuf,
-        quality: BrotliQuality,
-    ) -> Result<Converter<Loaded>> {
         if !&output.exists() {
             info!("Creating a new output file");
             write(&output, &[]).await?;
