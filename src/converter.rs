@@ -1,11 +1,11 @@
-use std::ops::Deref;
+use std::{ops::Deref, path::Path};
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use cpp::cpp;
 use log::info;
-use tokio::fs::{read, write};
+use tokio::fs::{metadata, read, write};
 
 use crate::{
     brotli_quality::BrotliQuality,
@@ -66,26 +66,34 @@ impl Converter<Uninitialized> {
         };
 
         if !&output.exists() {
-            info!("Creating a new output file");
             write(&output, &[]).await?;
         }
 
-        info!("{} → {}", &input.canonicalize_utf8()?, &output.canonicalize_utf8()?);
         let data = read(&input).await?;
 
-        Ok(Converter { state: Loaded { data, output, quality } })
+        Ok(Converter { state: Loaded { data, input, output, quality } })
     }
 }
 
 impl Converter<Loaded> {
-    pub async fn to_woff2(&self) -> Result<(usize, usize)> {
-        let data = self.convert_ttf_to_woff2().map_err(Error::from)?;
+    pub async fn write_to_woff2(&self) -> Result<(u64, u64)> {
+        let data = self.to_woff2().map_err(Error::from)?;
         write(&self.output, &data).await?;
+        let before = self.get_file_size(&self.input).await?;
+        let after = self.get_file_size(&self.output).await?;
 
-        Ok((self.data.len(), data.len()))
+        info!(
+            "{} ({} KB) → {} ({} KB)",
+            &self.input.canonicalize_utf8()?,
+            before / 1024,
+            &self.output.canonicalize_utf8()?,
+            after / 1024,
+        );
+
+        Ok((before, after))
     }
 
-    fn convert_ttf_to_woff2(&self) -> Result<Vec<u8>> {
+    fn to_woff2(&self) -> Result<Vec<u8>> {
         let capacity = self.data.len() + 1024;
 
         let data = self.data.as_ptr();
@@ -132,5 +140,12 @@ impl Converter<Loaded> {
         } else {
             Err(Error::ConversionFailed.into())
         }
+    }
+
+    async fn get_file_size<P>(&self, path: P) -> Result<u64>
+    where
+        P: AsRef<Path>,
+    {
+        Ok(metadata(path).await?.len())
     }
 }
