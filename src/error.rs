@@ -12,6 +12,9 @@ pub enum Error {
     #[error("Invalid file name: {0}. It must end with .ttf")]
     InvalidFileName(String),
 
+    #[error("File not found: {0}")]
+    FileNotFound(String),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
