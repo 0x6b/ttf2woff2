@@ -44,14 +44,18 @@ impl Converter<Uninitialized> {
     pub async fn try_new() -> Result<Converter<Loaded>> {
         let Uninitialized { input, output, quality } = Uninitialized::parse();
 
+        if !input.exists() {
+            return Err(Error::FileNotFound(input.to_string()).into());
+        }
+
         if input.extension() != Some("ttf") {
             return Err(Error::InvalidFileName(input.to_string()).into());
         }
 
-        Self::from(input, output, quality).await
+        Self::from_file(input, output, quality).await
     }
 
-    pub async fn from(
+    pub async fn from_file(
         input: Utf8PathBuf,
         output: Option<Utf8PathBuf>,
         quality: BrotliQuality,
@@ -69,28 +73,30 @@ impl Converter<Uninitialized> {
             write(&output, &[]).await?;
         }
 
-        let data = read(&input).await?;
+        Self::from_data(read(&input).await?, output, quality).await
+    }
 
-        Ok(Converter { state: Loaded { data, input, output, quality } })
+    pub async fn from_data(
+        data: Vec<u8>,
+        output: Utf8PathBuf,
+        quality: BrotliQuality,
+    ) -> Result<Converter<Loaded>> {
+        Ok(Converter { state: Loaded { data, output, quality } })
     }
 }
 
 impl Converter<Loaded> {
-    pub async fn write_to_woff2(&self) -> Result<(u64, u64)> {
+    pub async fn write_to_woff2(&self) -> Result<()> {
         let data = self.to_woff2().map_err(Error::from)?;
         write(&self.output, &data).await?;
-        let before = self.get_file_size(&self.input).await?;
-        let after = self.get_file_size(&self.output).await?;
 
         info!(
-            "{} ({} KB) → {} ({} KB)",
-            &self.input.canonicalize_utf8()?,
-            before / 1024,
+            "write to: {} ({} KB)",
             &self.output.canonicalize_utf8()?,
-            after / 1024,
+            &self.get_file_size(&self.output).await? / 1024
         );
 
-        Ok((before, after))
+        Ok(())
     }
 
     fn to_woff2(&self) -> Result<Vec<u8>> {
