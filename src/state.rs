@@ -28,6 +28,9 @@ pub struct Loaded {
     /// Font data
     pub data: Vec<u8>,
 
+    /// Path to the input TTF file
+    pub input: Utf8PathBuf,
+
     /// Path to the output WOFF2 file
     pub output: Utf8PathBuf,
 

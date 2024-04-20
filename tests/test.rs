@@ -13,7 +13,7 @@ async fn test() -> Result<()> {
     let output = root.join("NotoSansJP-Medium.woff2");
 
     let converter = Converter::from(input, Some(output.clone()), BrotliQuality::default()).await?;
-    let (input_size, output_size) = converter.to_woff2().await?;
+    let (input_size, output_size) = converter.write_to_woff2().await?;
 
     // pre-calculated SHA-256 hash and output file size using `woff2_compress` command from
     // https://github.com/google/woff2/blob/master/src/woff2_compress.cc
