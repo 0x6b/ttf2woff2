@@ -99,7 +99,7 @@ impl Converter<Loaded> {
         Ok(())
     }
 
-    fn to_woff2(&self) -> Result<Vec<u8>> {
+    pub fn to_woff2(&self) -> Result<Vec<u8>> {
         let capacity = self.data.len() + 1024;
 
         let data = self.data.as_ptr();
