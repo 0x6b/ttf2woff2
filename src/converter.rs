@@ -9,6 +9,7 @@ use tokio::fs::{metadata, read, write};
 
 use crate::{
     brotli_quality::BrotliQuality,
+    error::Error::{ConversionFailed, FileNotFound, InvalidFileName, OutputNotSpecified},
     state::{Loaded, State, Uninitialized},
     Error,
 };
@@ -45,11 +46,11 @@ impl Converter<Uninitialized> {
         let Uninitialized { input, output, quality } = Uninitialized::parse();
 
         if !input.exists() {
-            return Err(Error::FileNotFound(input.to_string()).into());
+            return Err(FileNotFound(input.to_string()).into());
         }
 
         if input.extension() != Some("ttf") {
-            return Err(Error::InvalidFileName(input.to_string()).into());
+            return Err(InvalidFileName(input.to_string()).into());
         }
 
         Self::from_file(input, output, quality).await
@@ -69,16 +70,12 @@ impl Converter<Uninitialized> {
             Some(o) => o,
         };
 
-        if !&output.exists() {
-            write(&output, &[]).await?;
-        }
-
-        Self::from_data(read(&input).await?, output, quality).await
+        Self::from_data(read(&input).await?, Some(output), quality).await
     }
 
     pub async fn from_data(
         data: Vec<u8>,
-        output: Utf8PathBuf,
+        output: Option<Utf8PathBuf>,
         quality: BrotliQuality,
     ) -> Result<Converter<Loaded>> {
         Ok(Converter { state: Loaded { data, output, quality } })
@@ -87,16 +84,25 @@ impl Converter<Uninitialized> {
 
 impl Converter<Loaded> {
     pub async fn write_to_woff2(&self) -> Result<()> {
-        let data = self.to_woff2().map_err(Error::from)?;
-        write(&self.output, &data).await?;
+        match &self.output {
+            Some(output) => {
+                if !&output.exists() {
+                    write(&output, &[]).await?;
+                }
 
-        info!(
-            "write to: {} ({} KB)",
-            &self.output.canonicalize_utf8()?,
-            &self.get_file_size(&self.output).await? / 1024
-        );
+                let data = self.to_woff2().map_err(Error::from)?;
+                write(output, &data).await?;
 
-        Ok(())
+                info!(
+                    "write to: {} ({} KB)",
+                    output.canonicalize_utf8()?,
+                    &self.get_file_size(output).await? / 1024
+                );
+
+                Ok(())
+            }
+            _ => Err(OutputNotSpecified.into()),
+        }
     }
 
     pub fn to_woff2(&self) -> Result<Vec<u8>> {
@@ -144,7 +150,7 @@ impl Converter<Loaded> {
             unsafe { woff_font_bytes.set_len(*woff_font_bytes_length.as_ptr()) };
             Ok(woff_font_bytes)
         } else {
-            Err(Error::ConversionFailed.into())
+            Err(ConversionFailed.into())
         }
     }
 

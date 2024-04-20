@@ -15,6 +15,9 @@ pub enum Error {
     #[error("File not found: {0}")]
     FileNotFound(String),
 
+    #[error("Output file is not specified")]
+    OutputNotSpecified,
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
