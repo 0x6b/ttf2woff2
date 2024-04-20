@@ -28,10 +28,8 @@ pub struct Loaded {
     /// Font data
     pub data: Vec<u8>,
 
-    /// Path to the input TTF file
-    pub input: Utf8PathBuf,
-
-    /// Path to the output WOFF2 file
+    /// Path to the output WOFF2 file. Defaults to the name of the input file with a .woff2
+    /// extension
     pub output: Utf8PathBuf,
 
     /// Brotli quality, between 0 and 11 inclusive
