@@ -121,7 +121,7 @@ impl Converter<Loaded> {
         let extended_metadata = bytes.as_ptr();
         let extended_metadata_length = 0usize;
 
-        let brotli_quality = self.quality.as_i32();
+        let brotli_quality: i32 = self.quality.into();
         let allow_transforms = true;
 
         let success = unsafe {

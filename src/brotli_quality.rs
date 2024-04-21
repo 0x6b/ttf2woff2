@@ -15,10 +15,6 @@ impl BrotliQuality {
     pub fn new(quality: u8) -> Self {
         Self { value: if quality > 11 { 11 } else { quality } }
     }
-
-    pub fn as_i32(&self) -> i32 {
-        self.value as i32
-    }
 }
 
 impl Default for BrotliQuality {
@@ -32,5 +28,11 @@ impl std::str::FromStr for BrotliQuality {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::new(s.parse()?))
+    }
+}
+
+impl From<BrotliQuality> for i32 {
+    fn from(quality: BrotliQuality) -> i32 {
+        quality.value as i32
     }
 }
