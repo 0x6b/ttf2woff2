@@ -6,9 +6,7 @@ pub enum Error {
     #[error("Failed to parse integer")]
     ParseInt(#[from] std::num::ParseIntError),
 
-    #[error("Got invalid Brotli quality: {0}")]
-    InvalidBrotliQuality(u8),
-
+    /// File name does not end with `.ttf`.
     #[error("Invalid file name: {0}. It must end with .ttf")]
     InvalidFileName(String),
 
