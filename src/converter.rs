@@ -2,7 +2,6 @@ use std::{ops::Deref, path::Path};
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use clap::Parser;
 use cpp::cpp;
 use log::info;
 use tokio::fs::{metadata, read, write};
@@ -43,7 +42,7 @@ where
 
 impl Converter<Uninitialized> {
     pub async fn try_new() -> Result<Converter<Loaded>> {
-        let Uninitialized { input, output, quality } = Uninitialized::parse();
+        let Uninitialized { input, output, quality } = Uninitialized::new();
 
         if !input.exists() {
             return Err(FileNotFound(input.to_string()).into());
