@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use camino::Utf8PathBuf;
 use clap::Parser;
 
@@ -45,7 +47,7 @@ pub struct Loaded {
 
     /// Path to the output WOFF2 file. Defaults to the name of the input file with a .woff2
     /// extension
-    pub output: Option<Utf8PathBuf>,
+    pub output: Option<PathBuf>,
 
     /// Brotli quality, between 0 and 11 inclusive
     pub quality: BrotliQuality,

@@ -1,7 +1,9 @@
-use std::{ops::Deref, path::Path};
+use std::{
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Result;
-use camino::Utf8PathBuf;
 use cpp::cpp;
 use log::info;
 use tokio::fs::{metadata, read, write};
@@ -69,18 +71,21 @@ impl Converter<Uninitialized> {
     ///  created in the same directory as the input file with the same name and the extension
     /// `.woff2`.
     /// - `quality` - The quality of the Brotli compression algorithm.
-    pub async fn from_file(
-        input: Utf8PathBuf,
-        output: Option<Utf8PathBuf>,
+    pub async fn from_file<P>(
+        input: P,
+        output: Option<P>,
         quality: BrotliQuality,
-    ) -> Result<Converter<Loaded>> {
-        let output = match output {
+    ) -> Result<Converter<Loaded>>
+    where
+        P: AsRef<Path>,
+    {
+        let output = match &output {
             None => {
-                let mut output = input.clone();
+                let mut output = input.as_ref().to_path_buf();
                 output.set_extension("woff2");
-                output
+                output.clone()
             }
-            Some(o) => o,
+            Some(p) => p.as_ref().to_path_buf(),
         };
 
         Self::from_data(read(&input).await?, Some(output), quality).await
@@ -96,7 +101,7 @@ impl Converter<Uninitialized> {
     /// - `quality` - The quality of the Brotli compression algorithm.
     pub async fn from_data(
         data: Vec<u8>,
-        output: Option<Utf8PathBuf>,
+        output: Option<PathBuf>,
         quality: BrotliQuality,
     ) -> Result<Converter<Loaded>> {
         Ok(Converter { state: Loaded { data, output, quality } })
@@ -119,7 +124,7 @@ impl Converter<Loaded> {
 
                 info!(
                     "write to: {} ({} KB)",
-                    output.canonicalize_utf8()?,
+                    output.canonicalize()?.display(),
                     &self.get_file_size(output).await? / 1024
                 );
 
