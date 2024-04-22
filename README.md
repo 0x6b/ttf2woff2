@@ -2,6 +2,8 @@
 
 A Rust library and CLI for compressing a TTF font to WOFF2 format. The output is compatible with [google/woff2](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) (via the `woff2_compress` command).
 
+You may use [Brooooooklyn/woff-build](https://github.com/Brooooooklyn/woff-build) instead, which has a more user-friendly interface. This library is more for my personal use and learning purposes.
+
 ## Prerequisites
 
 - Linux (tested on Ubuntu 22.04.4 LTS): `sudo apt install -y libbrotli-dev, g++`

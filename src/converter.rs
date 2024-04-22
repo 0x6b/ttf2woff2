@@ -1,8 +1,9 @@
-use std::{ops::Deref, path::Path};
+use std::{
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Result;
-use camino::Utf8PathBuf;
-use clap::Parser;
 use cpp::cpp;
 use log::info;
 use tokio::fs::{metadata, read, write};
@@ -23,6 +24,7 @@ cpp! {{
     using woff2::WOFF2Params;
 }}
 
+/// A converter from TTF to WOFF2 format
 pub struct Converter<S>
 where
     S: State,
@@ -41,9 +43,13 @@ where
     }
 }
 
+/// Converter which state is uninitialized. `Uninitialized` state means that the input file is not
+/// yet ready to be converted.
 impl Converter<Uninitialized> {
+    /// For CLI use case. Parse the command line arguments and create a new instance of the
+    /// converter. See `Uninitialized` for more information.
     pub async fn try_new() -> Result<Converter<Loaded>> {
-        let Uninitialized { input, output, quality } = Uninitialized::parse();
+        let Uninitialized { input, output, quality } = Uninitialized::new();
 
         if !input.exists() {
             return Err(FileNotFound(input.to_string()).into());
@@ -56,33 +62,56 @@ impl Converter<Uninitialized> {
         Self::from_file(input, output, quality).await
     }
 
-    pub async fn from_file(
-        input: Utf8PathBuf,
-        output: Option<Utf8PathBuf>,
+    /// Create a new instance of the converter from the given file.
+    ///
+    /// # Arguments
+    ///
+    /// - `input` - The path to the input TTF file.
+    /// - `output` - The path to the output WOFF2 file. If [`None`], the output file will be
+    ///  created in the same directory as the input file with the same name and the extension
+    /// `.woff2`.
+    /// - `quality` - The quality of the Brotli compression algorithm.
+    pub async fn from_file<P>(
+        input: P,
+        output: Option<P>,
         quality: BrotliQuality,
-    ) -> Result<Converter<Loaded>> {
-        let output = match output {
+    ) -> Result<Converter<Loaded>>
+    where
+        P: AsRef<Path>,
+    {
+        let output = match &output {
             None => {
-                let mut output = input.clone();
+                let mut output = input.as_ref().to_path_buf();
                 output.set_extension("woff2");
-                output
+                output.clone()
             }
-            Some(o) => o,
+            Some(p) => p.as_ref().to_path_buf(),
         };
 
         Self::from_data(read(&input).await?, Some(output), quality).await
     }
 
+    /// Create a new instance of the converter from the given data.
+    ///
+    /// # Arguments
+    ///
+    /// - `data` - The input TTF data.
+    /// - `output` - The path to the output WOFF2 file. If [`None`], you can't write the output to a
+    ///   file.
+    /// - `quality` - The quality of the Brotli compression algorithm.
     pub async fn from_data(
         data: Vec<u8>,
-        output: Option<Utf8PathBuf>,
+        output: Option<PathBuf>,
         quality: BrotliQuality,
     ) -> Result<Converter<Loaded>> {
         Ok(Converter { state: Loaded { data, output, quality } })
     }
 }
 
+/// Converter which state is loaded. `Loaded` state means that the input file is ready to be
+/// converted.
 impl Converter<Loaded> {
+    /// Write the output as WOFF2 file. If the output file exists, it will be overwritten.
     pub async fn write_to_woff2(&self) -> Result<()> {
         match &self.output {
             Some(output) => {
@@ -95,7 +124,7 @@ impl Converter<Loaded> {
 
                 info!(
                     "write to: {} ({} KB)",
-                    output.canonicalize_utf8()?,
+                    output.canonicalize()?.display(),
                     &self.get_file_size(output).await? / 1024
                 );
 
@@ -105,6 +134,7 @@ impl Converter<Loaded> {
         }
     }
 
+    /// Convert the input TTF data to WOFF2 format and return the result as an [`u8`] vector.
     pub fn to_woff2(&self) -> Result<Vec<u8>> {
         let capacity = self.data.len() + 1024;
 
