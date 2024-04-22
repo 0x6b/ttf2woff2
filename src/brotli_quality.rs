@@ -9,10 +9,14 @@ pub struct BrotliQuality {
 }
 
 impl BrotliQuality {
-    /// Create a new BrotliQuality
-    ///
-    /// If the quality is greater than 11, it will be clamped to 11.
-    pub fn new(quality: u8) -> Self {
+    /// Create a new BrotliQuality with the default value of 11.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create a new BrotliQuality with the given quality. If the quality is greater than 11, it is
+    /// clamped to 11.
+    pub fn from(quality: u8) -> Self {
         Self { value: if quality > 11 { 11 } else { quality } }
     }
 }
@@ -27,7 +31,7 @@ impl std::str::FromStr for BrotliQuality {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new(s.parse()?))
+        Ok(Self::from(s.parse()?))
     }
 }
 
