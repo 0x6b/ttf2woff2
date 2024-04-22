@@ -7,14 +7,16 @@ pub trait State {}
 impl State for Uninitialized {}
 impl State for Loaded {}
 
+/// A state for a converter that represents an uninitialized state.
 #[derive(Debug, Parser)]
 pub struct Uninitialized {
-    /// Path to the input TTF file
+    /// Path to the input TTF file. The file name must end with the `.ttf` extension, with
+    /// case-insensitive.
     #[clap()]
     pub input: Utf8PathBuf,
 
-    /// Path to the output WOFF2 file. Defaults to the name of the input file with a .woff2
-    /// extension
+    /// Path to the output WOFF2 file. [`None`] means that the output file will default to the name
+    /// of the input file with a `.woff2` extension.
     #[clap(short, long)]
     pub output: Option<Utf8PathBuf>,
 
@@ -48,5 +50,3 @@ pub struct Loaded {
     /// Brotli quality, between 0 and 11 inclusive
     pub quality: BrotliQuality,
 }
-
-impl State for Loaded {}

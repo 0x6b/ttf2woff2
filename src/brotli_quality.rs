@@ -1,6 +1,6 @@
 use crate::Error;
 
-/// Brotli compression quality
+/// [Brotli](https://github.com/google/brotli/) compression quality
 ///
 /// The quality parameter is an integer from 0 to 11.
 #[derive(Debug, Clone, Copy)]
@@ -21,12 +21,14 @@ impl BrotliQuality {
     }
 }
 
+/// Default quality is 11.
 impl Default for BrotliQuality {
     fn default() -> Self {
         Self { value: 11 }
     }
 }
 
+/// Convert a string to BrotliQuality. If the string is not a valid integer, an error is returned.
 impl std::str::FromStr for BrotliQuality {
     type Err = Error;
 
@@ -35,6 +37,7 @@ impl std::str::FromStr for BrotliQuality {
     }
 }
 
+/// Convert BrotliQuality to an i32 for use in the C++ code.
 impl From<BrotliQuality> for i32 {
     fn from(quality: BrotliQuality) -> i32 {
         quality.value as i32
