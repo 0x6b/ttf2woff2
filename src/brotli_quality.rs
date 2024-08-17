@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 use crate::Error;
 
 /// [Brotli](https://github.com/google/brotli/) compression quality
 ///
 /// The quality parameter is an integer from 0 to 11.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BrotliQuality {
     pub value: u8,
 }
