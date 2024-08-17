@@ -38,3 +38,7 @@ Options:
 
 - [lemonrock/woff2-sys: Rust FFI bindings to Google's woff2 library](https://github.com/lemonrock/woff2-sys)
 - [thibault-cne/woff2: An FFI biding to the google woff2 library in Rust.](https://github.com/thibault-cne/woff2)
+
+## Reference
+
+- [Reduce web font size | Articles | web.dev](https://web.dev/articles/reduce-webfont-size?hl=en)
