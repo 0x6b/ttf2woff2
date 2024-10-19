@@ -1,9 +1,6 @@
-use std::path::Path;
-
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use sha2::{Digest, Sha256};
-use tokio::fs::read;
+use sha2_hasher::Sha2Hasher;
 use ttf2woff2::{BrotliQuality, Converter};
 
 #[tokio::test]
@@ -19,23 +16,9 @@ async fn test() -> Result<()> {
     // pre-calculated SHA-256 hash and output file size using `woff2_compress` command from
     // https://github.com/google/woff2/blob/master/src/woff2_compress.cc
     assert_eq!(
-        calculate_hash(output).await?,
+        output.sha256().await?,
         "507421faf0310dae65c695f305b651379384f69a984dd04efdebdc999f96427a"
     );
 
     Ok(())
-}
-
-async fn calculate_hash<P>(path: P) -> Result<String>
-where
-    P: AsRef<Path>,
-{
-    let mut hasher = Sha256::new();
-    hasher.update(read(&path).await?);
-    let hash = hasher.finalize();
-    let hex = hash.iter().fold(String::new(), |mut output, b| {
-        output.push_str(&format!("{b:02x}"));
-        output
-    });
-    Ok(hex)
 }

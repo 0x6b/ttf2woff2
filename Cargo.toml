@@ -51,4 +51,4 @@ cpp_build = "0.5"
 pkg-config = "0.3"
 
 [dev-dependencies]
-sha2 = "0.11.0-pre.3"
+sha2_hasher = { git = "https://github.com/0x6b/sha2_hasher", tag = "v0.2.0" }
