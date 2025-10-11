@@ -9,10 +9,10 @@ use log::info;
 use tokio::fs::{metadata, read, write};
 
 use crate::{
+    Error,
     brotli_quality::BrotliQuality,
     error::Error::{ConversionFailed, FileNotFound, InvalidFileName, OutputNotSpecified},
     state::{Loaded, State, Uninitialized},
-    Error,
 };
 
 cpp! {{
@@ -68,8 +68,8 @@ impl Converter<Uninitialized> {
     ///
     /// - `input` - The path to the input TTF file.
     /// - `output` - The path to the output WOFF2 file. If [`None`], the output file will be
-    ///  created in the same directory as the input file with the same name and the extension
-    /// `.woff2`.
+    ///   created in the same directory as the input file with the same name and the extension
+    ///   `.woff2`.
     /// - `quality` - The quality of the Brotli compression algorithm.
     pub async fn from_file<P>(
         input: P,
