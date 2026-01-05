@@ -1,14 +1,12 @@
-use brotli::enc::BrotliEncoderParams;
+use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
 use crate::{
     BrotliQuality,
-    pure::{
-        directory::TableDirectoryEntry,
-        header::{WOFF2_SIGNATURE, Woff2Header},
-        known_tags::find_tag_index,
-        sfnt::Sfnt,
-        transform::glyf::transform_glyf,
-    },
+    directory::TableDirectoryEntry,
+    header::{WOFF2_SIGNATURE, Woff2Header},
+    known_tags::find_tag_index,
+    sfnt::Sfnt,
+    transform::glyf::transform_glyf,
 };
 
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, String> {
@@ -116,7 +114,7 @@ fn encode_with_options(
         mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
         ..Default::default()
     };
-    brotli::enc::BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
+    BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
         .map_err(|e| format!("Brotli compression failed: {e}"))?;
 
     let total_sfnt_size = 12

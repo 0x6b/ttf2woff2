@@ -1,4 +1,4 @@
-use crate::pure::{known_tags::find_tag_index, variable_int::encode_base128};
+use crate::{known_tags::find_tag_index, variable_int::encode_base128};
 
 pub struct TableDirectoryEntry {
     pub tag: [u8; 4],

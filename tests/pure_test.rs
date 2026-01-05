@@ -1,6 +1,6 @@
 use std::fs;
 
-use ttf2woff2::{BrotliQuality, pure::encode};
+use ttf2woff2::{BrotliQuality, encode};
 
 fn encode_font(name: &str, quality: u8) {
     let quality = BrotliQuality::from(quality);

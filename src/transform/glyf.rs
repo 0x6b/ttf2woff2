@@ -1,5 +1,5 @@
 use super::triplet::encode_triplet;
-use crate::pure::variable_int::encode_255_u_int16;
+use crate::variable_int::encode_255_u_int16;
 
 /// WOFF2 transformed glyf table header (36 bytes)
 pub struct TransformedGlyfHeader {

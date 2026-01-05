@@ -4,10 +4,17 @@
 //! You may use [Brooooooklyn/woff-build](https://github.com/Brooooooklyn/woff-build) instead, which has a more user-friendly interface. This library is more for my personal use and learning purposes.
 pub use brotli_quality::BrotliQuality;
 pub use converter::Converter;
+pub use encode::encode;
 pub use error::Error;
 
 mod brotli_quality;
 mod converter;
+pub mod directory;
+pub mod encode;
 mod error;
-pub mod pure;
+pub mod header;
+pub mod known_tags;
+pub mod sfnt;
 mod state;
+pub mod transform;
+pub mod variable_int;
