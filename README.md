@@ -35,16 +35,16 @@ std::fs::write("font.woff2", &woff2_data)?;
 
 ## Performance
 
-Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5.7MB):
+Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5.7MB) on Apple M4 Pro:
 
-| Implementation        | Time  | Output Size |
-| --------------------- | ----- | ----------- |
-| Rust (quality 11) | 3.0s  | 2.32 MB     |
-| Rust (quality 9)  | 0.33s | 2.42 MB     |
-| Python fonttools      | 9.2s  | 2.32 MB     |
+| Implementation    | Time  | Output Size |
+| ----------------- | ----- | ----------- |
+| Rust (quality 11) | 3.1s  | 2.32 MB     |
+| Rust (quality 9)  | 0.35s | 2.42 MB     |
+| Python fonttools  | 9.4s  | 2.32 MB     |
 
 - Quality 11 (default): 3x faster than fonttools
-- Quality 9: 27x faster than fonttools, with only 4% larger output
+- Quality 9: 27x faster than fonttools, ~4% larger output
 
 For faster conversion with minimal size impact, use `-q 9`.
 
