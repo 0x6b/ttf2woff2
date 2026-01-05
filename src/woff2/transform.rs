@@ -20,20 +20,20 @@ struct TransformedGlyfHeader {
     pub instruction_stream_size: u32,
 }
 
-impl TransformedGlyfHeader {
-    pub fn to_bytes(&self) -> [u8; 36] {
+impl From<&TransformedGlyfHeader> for [u8; 36] {
+    fn from(header: &TransformedGlyfHeader) -> Self {
         let mut out = [0u8; 36];
-        out[0..2].copy_from_slice(&self.version.to_be_bytes());
-        out[2..4].copy_from_slice(&self.option_flags.to_be_bytes());
-        out[4..6].copy_from_slice(&self.num_glyphs.to_be_bytes());
-        out[6..8].copy_from_slice(&self.index_format.to_be_bytes());
-        out[8..12].copy_from_slice(&self.n_contour_stream_size.to_be_bytes());
-        out[12..16].copy_from_slice(&self.n_points_stream_size.to_be_bytes());
-        out[16..20].copy_from_slice(&self.flag_stream_size.to_be_bytes());
-        out[20..24].copy_from_slice(&self.glyph_stream_size.to_be_bytes());
-        out[24..28].copy_from_slice(&self.composite_stream_size.to_be_bytes());
-        out[28..32].copy_from_slice(&self.bbox_stream_size.to_be_bytes());
-        out[32..36].copy_from_slice(&self.instruction_stream_size.to_be_bytes());
+        out[0..2].copy_from_slice(&header.version.to_be_bytes());
+        out[2..4].copy_from_slice(&header.option_flags.to_be_bytes());
+        out[4..6].copy_from_slice(&header.num_glyphs.to_be_bytes());
+        out[6..8].copy_from_slice(&header.index_format.to_be_bytes());
+        out[8..12].copy_from_slice(&header.n_contour_stream_size.to_be_bytes());
+        out[12..16].copy_from_slice(&header.n_points_stream_size.to_be_bytes());
+        out[16..20].copy_from_slice(&header.flag_stream_size.to_be_bytes());
+        out[20..24].copy_from_slice(&header.glyph_stream_size.to_be_bytes());
+        out[24..28].copy_from_slice(&header.composite_stream_size.to_be_bytes());
+        out[28..32].copy_from_slice(&header.bbox_stream_size.to_be_bytes());
+        out[32..36].copy_from_slice(&header.instruction_stream_size.to_be_bytes());
         out
     }
 }
@@ -163,7 +163,7 @@ impl TransformedGlyf {
             + self.instruction_stream.len();
 
         let mut output = Vec::with_capacity(total_size);
-        output.extend_from_slice(&header.to_bytes());
+        output.extend_from_slice(&<[u8; 36]>::from(&header));
         output.extend_from_slice(&self.n_contour_stream);
         output.extend_from_slice(&self.n_points_stream);
         output.extend_from_slice(&self.flag_stream);

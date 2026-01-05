@@ -190,7 +190,7 @@ impl<'a> Encoder<'a> {
         let mut encoded = Vec::with_capacity(entries.len());
         let mut size = 0usize;
         for entry in entries {
-            let bytes = entry.to_bytes();
+            let bytes = InlineBytes::from(entry);
             size += bytes.len();
             encoded.push(bytes);
         }
@@ -310,7 +310,7 @@ impl<'a> Encoder<'a> {
         };
 
         let mut result = Vec::with_capacity(total_length as usize);
-        result.extend_from_slice(&header.to_bytes());
+        result.extend_from_slice(&<[u8; 48]>::from(&header));
         for entry in encoded_directory {
             result.extend_from_slice(entry.as_slice());
         }

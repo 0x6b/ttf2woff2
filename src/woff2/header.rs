@@ -17,23 +17,23 @@ pub(crate) struct Woff2Header {
     pub priv_length: u32,
 }
 
-impl Woff2Header {
-    pub fn to_bytes(&self) -> [u8; 48] {
+impl From<&Woff2Header> for [u8; 48] {
+    fn from(header: &Woff2Header) -> Self {
         let mut bytes = [0u8; 48];
-        bytes[0..4].copy_from_slice(&self.signature.to_be_bytes());
-        bytes[4..8].copy_from_slice(&self.flavor.to_be_bytes());
-        bytes[8..12].copy_from_slice(&self.length.to_be_bytes());
-        bytes[12..14].copy_from_slice(&self.num_tables.to_be_bytes());
-        bytes[14..16].copy_from_slice(&self.reserved.to_be_bytes());
-        bytes[16..20].copy_from_slice(&self.total_sfnt_size.to_be_bytes());
-        bytes[20..24].copy_from_slice(&self.total_compressed_size.to_be_bytes());
-        bytes[24..26].copy_from_slice(&self.major_version.to_be_bytes());
-        bytes[26..28].copy_from_slice(&self.minor_version.to_be_bytes());
-        bytes[28..32].copy_from_slice(&self.meta_offset.to_be_bytes());
-        bytes[32..36].copy_from_slice(&self.meta_length.to_be_bytes());
-        bytes[36..40].copy_from_slice(&self.meta_orig_length.to_be_bytes());
-        bytes[40..44].copy_from_slice(&self.priv_offset.to_be_bytes());
-        bytes[44..48].copy_from_slice(&self.priv_length.to_be_bytes());
+        bytes[0..4].copy_from_slice(&header.signature.to_be_bytes());
+        bytes[4..8].copy_from_slice(&header.flavor.to_be_bytes());
+        bytes[8..12].copy_from_slice(&header.length.to_be_bytes());
+        bytes[12..14].copy_from_slice(&header.num_tables.to_be_bytes());
+        bytes[14..16].copy_from_slice(&header.reserved.to_be_bytes());
+        bytes[16..20].copy_from_slice(&header.total_sfnt_size.to_be_bytes());
+        bytes[20..24].copy_from_slice(&header.total_compressed_size.to_be_bytes());
+        bytes[24..26].copy_from_slice(&header.major_version.to_be_bytes());
+        bytes[26..28].copy_from_slice(&header.minor_version.to_be_bytes());
+        bytes[28..32].copy_from_slice(&header.meta_offset.to_be_bytes());
+        bytes[32..36].copy_from_slice(&header.meta_length.to_be_bytes());
+        bytes[36..40].copy_from_slice(&header.meta_orig_length.to_be_bytes());
+        bytes[40..44].copy_from_slice(&header.priv_offset.to_be_bytes());
+        bytes[44..48].copy_from_slice(&header.priv_length.to_be_bytes());
         bytes
     }
 }
@@ -60,7 +60,7 @@ mod tests {
             priv_offset: 0,
             priv_length: 0,
         };
-        assert_eq!(header.to_bytes().len(), 48);
+        assert_eq!(<[u8; 48]>::from(&header).len(), 48);
     }
 
     #[test]
@@ -81,7 +81,7 @@ mod tests {
             priv_offset: 0,
             priv_length: 0,
         };
-        let bytes = header.to_bytes();
+        let bytes: [u8; 48] = (&header).into();
         assert_eq!(&bytes[0..4], b"wOF2");
     }
 }
