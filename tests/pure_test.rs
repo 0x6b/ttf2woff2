@@ -30,5 +30,5 @@ fn test_pure_encode() {
 
 #[test]
 fn test_noto() {
-    encode_font("NotoSansJP-Medium", 1);
+    encode_font("NotoSansJP-Medium", 11);
 }
