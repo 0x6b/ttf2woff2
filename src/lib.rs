@@ -20,7 +20,7 @@ mod encode;
 mod error;
 mod header;
 mod sfnt;
+mod inline_bytes;
 mod tag;
 mod transform;
-mod util;
 mod variable_int;
