@@ -25,6 +25,13 @@ ttf2woff2 font.ttf -q 5                # Lower quality (faster, larger)
 
 ## Library Usage
 
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ttf2woff2 = { version = "0.10", default-features = false }
+```
+
 ```rust
 use ttf2woff2::{encode, BrotliQuality};
 

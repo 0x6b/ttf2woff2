@@ -18,13 +18,15 @@ path = "src/lib.rs"
 [[bin]]
 name = "ttf2woff2"
 path = "src/main.rs"
+required-features = ["cli"]
 
 [features]
-default = []
+default = ["cli"]
+cli = ["dep:clap"]
 timing = []
 
 [dependencies]
 brotli = { version = "8", features = ["disable-timer"] }
 byteorder = "1"
 thiserror = "2"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive"], optional = true }
