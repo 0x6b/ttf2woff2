@@ -1,5 +1,5 @@
 use crate::{
-    encoding::{encode_base128, InlineBytes},
+    encoding::{InlineBytes, encode_base128},
     tag::Tag,
 };
 

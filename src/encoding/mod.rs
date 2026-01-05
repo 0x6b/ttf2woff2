@@ -3,5 +3,5 @@ mod triplet;
 mod varint;
 
 pub use inline_bytes::InlineBytes;
-pub use triplet::{encode_triplet, TripletData};
-pub use varint::{encode_255_u_int16, encode_base128, EncodedInt};
+pub use triplet::{TripletData, encode_triplet};
+pub use varint::{EncodedInt, encode_255_u_int16, encode_base128};

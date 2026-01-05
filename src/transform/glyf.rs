@@ -2,8 +2,10 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, ReadBytesExt};
 
-use crate::{encoding::encode_255_u_int16, Error};
-use crate::encoding::encode_triplet;
+use crate::{
+    Error,
+    encoding::{encode_255_u_int16, encode_triplet},
+};
 
 /// WOFF2 transformed glyf table header (36 bytes)
 pub struct TransformedGlyfHeader {

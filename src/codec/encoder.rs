@@ -1,6 +1,6 @@
 use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
-use super::{TableDirectoryEntry, Woff2Header, WOFF2_SIGNATURE};
+use super::{TableDirectoryEntry, WOFF2_SIGNATURE, Woff2Header};
 use crate::{
     BrotliQuality, Error,
     encoding::InlineBytes,
@@ -47,6 +47,29 @@ struct Encoder<'a> {
     options: EncodeOptions,
 }
 
+struct TableRefs<'a> {
+    glyf: Option<&'a SfntTable>,
+    loca: Option<&'a SfntTable>,
+    head: Option<&'a SfntTable>,
+    maxp: Option<&'a SfntTable>,
+}
+
+impl<'a> TableRefs<'a> {
+    fn from_sorted(sorted_tables: &[&'a SfntTable]) -> Self {
+        let mut refs = Self { glyf: None, loca: None, head: None, maxp: None };
+        for &table in sorted_tables {
+            match () {
+                _ if table.tag.is_glyf() => refs.glyf = Some(table),
+                _ if table.tag.is_loca() => refs.loca = Some(table),
+                _ if table.tag.is_head() => refs.head = Some(table),
+                _ if table.tag.is_maxp() => refs.maxp = Some(table),
+                _ => {}
+            }
+        }
+        refs
+    }
+}
+
 impl<'a> Encoder<'a> {
     fn new(data: &'a [u8], options: EncodeOptions) -> Result<Self, Error> {
         let sfnt = time_section!("SFNT parsing", Sfnt::parse(data)?);
@@ -66,9 +89,9 @@ impl<'a> Encoder<'a> {
         let mut sorted_tables: Vec<_> = self.sfnt.tables.iter().collect();
         sorted_tables.sort_by_key(|t| t.tag);
 
-        let (major_version, minor_version) = self.extract_version(&sorted_tables);
-        let transformed_glyf =
-            self.transform_glyf_if_needed(&sorted_tables, self.options.transform_glyf_loca)?;
+        let table_refs = TableRefs::from_sorted(&sorted_tables);
+        let (major_version, minor_version) = self.extract_version(&table_refs);
+        let transformed_glyf = self.transform_glyf_if_needed(&table_refs)?;
         let transformed_glyf_len = transformed_glyf.as_ref().map(|v| v.len() as u32);
 
         let directory_entries = self.build_directory_entries(&sorted_tables, transformed_glyf_len);
@@ -92,10 +115,9 @@ impl<'a> Encoder<'a> {
         Ok(result)
     }
 
-    fn extract_version(&self, sorted_tables: &[&SfntTable]) -> (u16, u16) {
-        sorted_tables
-            .iter()
-            .find(|t| t.tag.is_head())
+    fn extract_version(&self, table_refs: &TableRefs) -> (u16, u16) {
+        table_refs
+            .head
             .and_then(|head| {
                 let start = head.offset as usize;
                 let data = self.data.get(start + 4..start + 8)?;
@@ -107,22 +129,13 @@ impl<'a> Encoder<'a> {
             .unwrap_or((0, 0))
     }
 
-    fn transform_glyf_if_needed(
-        &self,
-        sorted_tables: &[&SfntTable],
-        transform_glyf_loca: bool,
-    ) -> Result<Option<Vec<u8>>, Error> {
-        if !transform_glyf_loca {
+    fn transform_glyf_if_needed(&self, table_refs: &TableRefs) -> Result<Option<Vec<u8>>, Error> {
+        if !self.options.transform_glyf_loca {
             return Ok(None);
         }
 
-        let glyf_table = sorted_tables.iter().find(|t| t.tag.is_glyf());
-        let loca_table = sorted_tables.iter().find(|t| t.tag.is_loca());
-        let head_table = sorted_tables.iter().find(|t| t.tag.is_head());
-        let maxp_table = sorted_tables.iter().find(|t| t.tag.is_maxp());
-
         if let (Some(glyf), Some(loca), Some(head), Some(maxp)) =
-            (glyf_table, loca_table, head_table, maxp_table)
+            (table_refs.glyf, table_refs.loca, table_refs.head, table_refs.maxp)
         {
             let glyf_data = self.table_slice(glyf);
             let loca_data = self.table_slice(loca);
