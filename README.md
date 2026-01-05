@@ -12,7 +12,7 @@ A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
 ## Installation
 
 ```bash
-cargo install ttf2woff2
+cargo install --git https://github.com/0x6b/ttf2woff2
 ```
 
 ## CLI Usage
