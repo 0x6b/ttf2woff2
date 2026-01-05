@@ -8,8 +8,7 @@ use clap::Parser;
 use ttf2woff2::{BrotliQuality, encode};
 
 #[derive(Parser)]
-#[command(name = "ttf2woff2")]
-#[command(about = "Convert TTF fonts to WOFF2 format")]
+#[command(about, version)]
 struct Args {
     /// Path to the input TTF file
     input: PathBuf,
