@@ -84,39 +84,6 @@ impl<'a> Encoder<'a> {
         &self.data[start..end]
     }
 
-    fn encode(self) -> Result<Vec<u8>, Error> {
-        #[cfg(feature = "timing")]
-        let total_start = std::time::Instant::now();
-
-        let mut sorted_tables: Vec<_> = self.sfnt.tables.iter().collect();
-        sorted_tables.sort_by_key(|t| t.tag);
-
-        let table_refs = TableRefs::from_sorted(&sorted_tables);
-        let (major_version, minor_version) = self.extract_version(&table_refs);
-        let transformed_glyf = self.transform_glyf_if_needed(&table_refs)?;
-        let transformed_glyf_len = transformed_glyf.as_ref().map(|v| v.len() as u32);
-
-        let directory_entries = self.build_directory_entries(&sorted_tables, transformed_glyf_len);
-        let (encoded_directory, directory_size) = self.encode_directory_entries(&directory_entries);
-        let uncompressed_data =
-            self.build_uncompressed_data(&sorted_tables, transformed_glyf.as_deref());
-        let compressed_data = self.compress(&uncompressed_data)?;
-
-        let result = self.build_output(
-            &sorted_tables,
-            &encoded_directory,
-            directory_size,
-            &compressed_data,
-            major_version,
-            minor_version,
-        );
-
-        #[cfg(feature = "timing")]
-        eprintln!("[TIMING] Total encode time: {:?}", total_start.elapsed());
-
-        Ok(result)
-    }
-
     fn extract_version(&self, table_refs: &TableRefs) -> (u16, u16) {
         table_refs
             .head
@@ -319,12 +286,51 @@ impl<'a> Encoder<'a> {
     }
 }
 
+impl TryFrom<Encoder<'_>> for Vec<u8> {
+    type Error = Error;
+
+    fn try_from(encoder: Encoder<'_>) -> Result<Self, Self::Error> {
+        #[cfg(feature = "timing")]
+        let total_start = std::time::Instant::now();
+
+        let mut sorted_tables: Vec<_> = encoder.sfnt.tables.iter().collect();
+        sorted_tables.sort_by_key(|t| t.tag);
+
+        let table_refs = TableRefs::from_sorted(&sorted_tables);
+        let (major_version, minor_version) = encoder.extract_version(&table_refs);
+        let transformed_glyf = encoder.transform_glyf_if_needed(&table_refs)?;
+        let transformed_glyf_len = transformed_glyf.as_ref().map(|v| v.len() as u32);
+
+        let directory_entries =
+            encoder.build_directory_entries(&sorted_tables, transformed_glyf_len);
+        let (encoded_directory, directory_size) =
+            encoder.encode_directory_entries(&directory_entries);
+        let uncompressed_data =
+            encoder.build_uncompressed_data(&sorted_tables, transformed_glyf.as_deref());
+        let compressed_data = encoder.compress(&uncompressed_data)?;
+
+        let result = encoder.build_output(
+            &sorted_tables,
+            &encoded_directory,
+            directory_size,
+            &compressed_data,
+            major_version,
+            minor_version,
+        );
+
+        #[cfg(feature = "timing")]
+        eprintln!("[TIMING] Total encode time: {:?}", total_start.elapsed());
+
+        Ok(result)
+    }
+}
+
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
     let options = EncodeOptions { quality, transform_glyf_loca: true };
-    Encoder::new(ttf_data, options)?.encode()
+    Encoder::new(ttf_data, options)?.try_into()
 }
 
 pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
     let options = EncodeOptions { quality, transform_glyf_loca: false };
-    Encoder::new(ttf_data, options)?.encode()
+    Encoder::new(ttf_data, options)?.try_into()
 }
