@@ -72,6 +72,7 @@ uv run --with fonttools --with brotli scripts/validate.py font.ttf font.woff2
 ## License
 
 - The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font in [tests/](tests) is licensed under [OFL](OFL.txt).
+- The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/](tests) is licensed under [OFL](OFL.txt).
 - Everything else is [MIT](LICENSE).
 
 ## References
