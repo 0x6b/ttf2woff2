@@ -77,7 +77,7 @@ def main():
 
     all_passed = True
     for ttf_path in sorted(ttf_files):
-        woff2_path = ttf_path.with_name(ttf_path.stem + "-pure.woff2")
+        woff2_path = ttf_path.with_name(ttf_path.stem + ".woff2")
 
         if not woff2_path.exists():
             print(f"  ⚠ {ttf_path.name}: No corresponding WOFF2 file")

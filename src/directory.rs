@@ -35,21 +35,3 @@ impl TableDirectoryEntry {
         result
     }
 }
-
-pub fn build_directory(tables: &[(&[u8; 4], u32)]) -> Vec<TableDirectoryEntry> {
-    tables
-        .iter()
-        .map(|(tag, length)| {
-            let tag_index = find_tag_index(tag);
-            let is_glyf_or_loca = tag_index == Some(10) || tag_index == Some(11);
-            let transform_version = if is_glyf_or_loca { 3 } else { 0 };
-
-            TableDirectoryEntry {
-                tag: **tag,
-                orig_length: *length,
-                transform_version,
-                transform_length: None,
-            }
-        })
-        .collect()
-}

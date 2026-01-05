@@ -12,10 +12,6 @@ pub fn find_tag_index(tag: &[u8; 4]) -> Option<u8> {
     KNOWN_TAGS.iter().position(|t| t == tag).map(|i| i as u8)
 }
 
-pub fn get_tag(index: u8) -> Option<[u8; 4]> {
-    KNOWN_TAGS.get(index as usize).copied()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,28 +29,5 @@ mod tests {
     fn test_find_tag_index_unknown_tag() {
         assert_eq!(find_tag_index(b"XXXX"), None);
         assert_eq!(find_tag_index(b"    "), None);
-    }
-
-    #[test]
-    fn test_get_tag_valid_indices() {
-        assert_eq!(get_tag(0), Some(*b"cmap"));
-        assert_eq!(get_tag(1), Some(*b"head"));
-        assert_eq!(get_tag(6), Some(*b"OS/2"));
-        assert_eq!(get_tag(13), Some(*b"CFF "));
-        assert_eq!(get_tag(62), Some(*b"Sill"));
-    }
-
-    #[test]
-    fn test_get_tag_invalid_indices() {
-        assert_eq!(get_tag(63), None);
-        assert_eq!(get_tag(255), None);
-    }
-
-    #[test]
-    fn test_roundtrip() {
-        for i in 0..63u8 {
-            let tag = get_tag(i).unwrap();
-            assert_eq!(find_tag_index(&tag), Some(i));
-        }
     }
 }

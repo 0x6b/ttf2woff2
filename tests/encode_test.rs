@@ -19,17 +19,17 @@ fn encode_font(name: &str, quality: u8) {
         (1.0 - woff2_data.len() as f64 / ttf_data.len() as f64) * 100.0
     );
 
-    let output = root.join(format!("{name}-pure.woff2"));
+    let output = root.join(format!("{name}.woff2"));
     fs::write(&output, &woff2_data).expect("Failed to write WOFF2 file");
     println!("Wrote to {}", output.display());
 }
 
 #[test]
-fn test_pure_encode() {
+fn test_warpnine_sans() {
     encode_font("WarpnineSans-Regular", 11);
 }
 
 #[test]
-fn test_noto() {
+fn test_noto_sans_jp() {
     encode_font("NotoSansJP-Medium", 11);
 }

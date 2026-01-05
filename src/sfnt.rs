@@ -3,7 +3,6 @@ pub const CFF_FLAVOR: u32 = 0x4F54544F; // 'OTTO'
 
 pub struct SfntTable {
     pub tag: [u8; 4],
-    pub checksum: u32,
     pub offset: u32,
     pub length: u32,
 }
@@ -35,12 +34,6 @@ impl Sfnt {
         for i in 0..num_tables {
             let offset = 12 + i * 16;
             let tag = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
-            let checksum = u32::from_be_bytes([
-                data[offset + 4],
-                data[offset + 5],
-                data[offset + 6],
-                data[offset + 7],
-            ]);
             let table_offset = u32::from_be_bytes([
                 data[offset + 8],
                 data[offset + 9],
@@ -59,17 +52,9 @@ impl Sfnt {
                 return Err("Table extends beyond data");
             }
 
-            tables.push(SfntTable { tag, checksum, offset: table_offset, length });
+            tables.push(SfntTable { tag, offset: table_offset, length });
         }
 
         Ok(Self { flavor, tables })
-    }
-
-    pub fn get_table_data<'a>(&self, tag: &[u8; 4], data: &'a [u8]) -> Option<&'a [u8]> {
-        self.tables.iter().find(|t| &t.tag == tag).map(|t| {
-            let start = t.offset as usize;
-            let end = start + t.length as usize;
-            &data[start..end]
-        })
     }
 }
