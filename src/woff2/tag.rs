@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct Tag(pub [u8; 4]);
+pub(super) struct Tag(pub(super) [u8; 4]);
 
 const KNOWN_TAGS: [[u8; 4]; 63] = [
     *b"cmap", *b"head", *b"hhea", *b"hmtx", *b"maxp", *b"name", *b"OS/2", *b"post", *b"cvt ",

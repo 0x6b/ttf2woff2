@@ -1,5 +1,5 @@
 #[derive(Clone, Copy)]
-pub struct InlineBytes<const N: usize> {
+pub(super) struct InlineBytes<const N: usize> {
     data: [u8; N],
     len: u8,
 }

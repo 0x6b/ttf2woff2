@@ -1,12 +1,12 @@
 use super::inline_bytes::InlineBytes;
 
 /// Triplet encoding result - up to 4 bytes, stored inline to avoid heap allocation
-pub type TripletData = InlineBytes<4>;
+type TripletData = InlineBytes<4>;
 
 /// Encode a coordinate delta pair using WOFF2 triplet encoding.
 /// Returns (flag_byte, triplet_bytes).
 #[inline]
-pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
+pub(super) fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
     let abs_x = x.unsigned_abs();
     let abs_y = y.unsigned_abs();
     let on_curve_bit: u8 = if on_curve { 0 } else { 128 };

@@ -10,4 +10,4 @@ mod triplet;
 mod varint;
 
 pub use brotli_quality::BrotliQuality;
-pub use encoder::{encode, encode_no_transform, EncodeOptions};
+pub use encoder::{EncodeOptions, encode, encode_no_transform};

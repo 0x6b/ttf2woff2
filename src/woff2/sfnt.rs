@@ -5,7 +5,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use super::tag::Tag;
 use crate::Error;
 
-pub const TTF_FLAVOR: u32 = 0x00010000;
+const TTF_FLAVOR: u32 = 0x00010000;
 
 pub(crate) struct SfntTable {
     pub tag: Tag,

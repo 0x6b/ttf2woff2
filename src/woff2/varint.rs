@@ -1,11 +1,11 @@
 use super::inline_bytes::InlineBytes;
 
 /// Encoded variable integer - up to 5 bytes for base128, 3 bytes for 255UInt16
-pub type EncodedInt = InlineBytes<5>;
+type EncodedInt = InlineBytes<5>;
 
 /// UIntBase128 encoding per WOFF2 spec.
 #[inline]
-pub fn encode_base128(mut value: u32) -> EncodedInt {
+pub(super) fn encode_base128(mut value: u32) -> EncodedInt {
     if value == 0 {
         return InlineBytes::new([0, 0, 0, 0, 0], 1);
     }
@@ -38,7 +38,7 @@ pub fn encode_base128(mut value: u32) -> EncodedInt {
 
 /// 255UInt16 encoding per WOFF2 spec.
 #[inline]
-pub fn encode_255_u_int16(value: u16) -> EncodedInt {
+pub(super) fn encode_255_u_int16(value: u16) -> EncodedInt {
     const ONE_MORE_BYTE_CODE1: u8 = 253;
     const ONE_MORE_BYTE_CODE2: u8 = 254;
     const WORD_CODE: u8 = 255;
