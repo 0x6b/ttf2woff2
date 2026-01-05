@@ -1,6 +1,6 @@
-pub const WOFF2_SIGNATURE: u32 = 0x774F4632; // 'wOF2'
+pub(crate) const WOFF2_SIGNATURE: u32 = 0x774F4632; // 'wOF2'
 
-pub struct Woff2Header {
+pub(crate) struct Woff2Header {
     pub signature: u32,
     pub flavor: u32,
     pub length: u32,

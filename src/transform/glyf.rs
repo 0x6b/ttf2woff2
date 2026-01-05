@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// WOFF2 transformed glyf table header (36 bytes)
-pub struct TransformedGlyfHeader {
+struct TransformedGlyfHeader {
     pub version: u16,      // 0x0000
     pub option_flags: u16, // bit 0: has overlap simple bitmap
     pub num_glyphs: u16,
@@ -41,7 +41,7 @@ impl TransformedGlyfHeader {
 }
 
 /// Builder for transformed glyf data
-pub struct TransformedGlyf {
+struct TransformedGlyf {
     pub n_contour_stream: Vec<u8>,
     pub n_points_stream: Vec<u8>,
     pub flag_stream: Vec<u8>,
@@ -398,7 +398,7 @@ impl Iterator for GlyphOffsetIter<'_> {
 
 impl ExactSizeIterator for GlyphOffsetIter<'_> {}
 
-pub fn transform_glyf(
+pub(crate) fn transform_glyf(
     glyf_data: &[u8],
     loca_data: &[u8],
     head_data: &[u8],

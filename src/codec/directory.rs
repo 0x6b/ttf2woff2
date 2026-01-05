@@ -3,7 +3,7 @@ use crate::{
     tag::Tag,
 };
 
-pub struct TableDirectoryEntry {
+pub(crate) struct TableDirectoryEntry {
     pub tag: Tag,
     pub orig_length: u32,
     pub transform_version: u8,
