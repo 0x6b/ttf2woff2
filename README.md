@@ -40,19 +40,25 @@ std::fs::write("font.woff2", &woff2_data)?;
 | WarpnineSans-Regular | 275 KB | 80 KB | 70.7% |
 | NotoSansJP-Medium | 5.7 MB | 2.3 MB | 59.5% |
 
-## Validation Scripts
+## Validation
 
-Python scripts are provided to validate WOFF2 output:
+Tests generate WOFF2 files and validate against fonttools:
 
 ```bash
+cargo test
+```
+
+Python scripts are also provided for manual validation:
+
+```bash
+# Test against fonttools (generates fonttools WOFF2 on the fly)
+uv run --with fonttools --with brotli scripts/test_against_fonttools.py font.ttf font.woff2
+
 # Validate metadata and glyph shapes
 uv run --with fonttools --with brotli scripts/validate_woff2.py font.ttf font.woff2
 
 # Compare file sizes with fonttools
 uv run --with fonttools --with brotli scripts/compare_size.py font.ttf font.woff2
-
-# Validate all WOFF2 files in tests/
-uv run --with fonttools --with brotli scripts/validate_all.py
 ```
 
 ## License
