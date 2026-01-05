@@ -276,12 +276,43 @@ impl SimpleGlyph {
                 }
                 let repeat = data[pos] as usize;
                 cursor.set_position((pos + 1) as u64);
-                for _ in 0..repeat {
-                    flags.push(flag);
-                }
+                let new_len = flags.len() + repeat;
+                flags.resize(new_len, flag);
             }
         }
         Ok(flags)
+    }
+
+    fn parse_coords(
+        cursor: &mut Cursor<&[u8]>,
+        data: &[u8],
+        flags: &[u8],
+        short_bit: u8,
+        same_or_positive_bit: u8,
+        err: &'static str,
+    ) -> Result<Vec<i16>, Error> {
+        let mut coords = Vec::with_capacity(flags.len());
+        let mut acc: i16 = 0;
+        for &flag in flags {
+            let is_short = flag & short_bit != 0;
+            let same_or_positive = flag & same_or_positive_bit != 0;
+            let delta: i16 = if is_short {
+                let pos = cursor.position() as usize;
+                if pos >= data.len() {
+                    return Err(Error::InvalidGlyph(err));
+                }
+                let val = data[pos] as i16;
+                cursor.set_position((pos + 1) as u64);
+                if same_or_positive { val } else { -val }
+            } else if same_or_positive {
+                0
+            } else {
+                cursor.read_i16::<BigEndian>().map_err(|_| Error::InvalidGlyph(err))?
+            };
+            acc = acc.wrapping_add(delta);
+            coords.push(acc);
+        }
+        Ok(coords)
     }
 
     fn parse_x_coords(
@@ -289,30 +320,7 @@ impl SimpleGlyph {
         data: &[u8],
         flags: &[u8],
     ) -> Result<Vec<i16>, Error> {
-        let mut x_coords = Vec::with_capacity(flags.len());
-        let mut x_acc: i16 = 0;
-        for &flag in flags {
-            let x_short = flag & 0x02 != 0;
-            let x_same_or_positive = flag & 0x10 != 0;
-            let delta: i16 = if x_short {
-                let pos = cursor.position() as usize;
-                if pos >= data.len() {
-                    return Err(Error::InvalidGlyph("unexpected end of x coordinate"));
-                }
-                let val = data[pos] as i16;
-                cursor.set_position((pos + 1) as u64);
-                if x_same_or_positive { val } else { -val }
-            } else if x_same_or_positive {
-                0
-            } else {
-                cursor
-                    .read_i16::<BigEndian>()
-                    .map_err(|_| Error::InvalidGlyph("unexpected end of x coordinate"))?
-            };
-            x_acc = x_acc.wrapping_add(delta);
-            x_coords.push(x_acc);
-        }
-        Ok(x_coords)
+        Self::parse_coords(cursor, data, flags, 0x02, 0x10, "unexpected end of x coordinate")
     }
 
     fn parse_y_coords(
@@ -320,30 +328,7 @@ impl SimpleGlyph {
         data: &[u8],
         flags: &[u8],
     ) -> Result<Vec<i16>, Error> {
-        let mut y_coords = Vec::with_capacity(flags.len());
-        let mut y_acc: i16 = 0;
-        for &flag in flags {
-            let y_short = flag & 0x04 != 0;
-            let y_same_or_positive = flag & 0x20 != 0;
-            let delta: i16 = if y_short {
-                let pos = cursor.position() as usize;
-                if pos >= data.len() {
-                    return Err(Error::InvalidGlyph("unexpected end of y coordinate"));
-                }
-                let val = data[pos] as i16;
-                cursor.set_position((pos + 1) as u64);
-                if y_same_or_positive { val } else { -val }
-            } else if y_same_or_positive {
-                0
-            } else {
-                cursor
-                    .read_i16::<BigEndian>()
-                    .map_err(|_| Error::InvalidGlyph("unexpected end of y coordinate"))?
-            };
-            y_acc = y_acc.wrapping_add(delta);
-            y_coords.push(y_acc);
-        }
-        Ok(y_coords)
+        Self::parse_coords(cursor, data, flags, 0x04, 0x20, "unexpected end of y coordinate")
     }
 
     fn compute_bbox(&self) -> (i16, i16, i16, i16) {

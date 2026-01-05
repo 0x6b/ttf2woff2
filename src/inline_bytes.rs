@@ -11,8 +11,13 @@ impl<const N: usize> InlineBytes<N> {
     }
 
     #[inline]
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    #[inline]
     pub fn as_slice(&self) -> &[u8] {
-        &self.data[..self.len as usize]
+        &self.data[..self.len()]
     }
 }
 

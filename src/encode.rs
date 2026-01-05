@@ -4,6 +4,7 @@ use crate::{
     BrotliQuality, Error,
     directory::TableDirectoryEntry,
     header::{WOFF2_SIGNATURE, Woff2Header},
+    inline_bytes::InlineBytes,
     sfnt::{Sfnt, SfntTable},
     transform::glyf::transform_glyf,
 };
@@ -37,6 +38,12 @@ impl<'a> Encoder<'a> {
         Ok(Self { data, sfnt, quality })
     }
 
+    fn table_slice(&self, table: &SfntTable) -> &'a [u8] {
+        let start = table.offset as usize;
+        let end = start + table.length as usize;
+        &self.data[start..end]
+    }
+
     fn encode(self, transform_glyf_loca: bool) -> Result<Vec<u8>, Error> {
         #[cfg(feature = "timing")]
         let total_start = std::time::Instant::now();
@@ -50,13 +57,15 @@ impl<'a> Encoder<'a> {
         let transformed_glyf_len = transformed_glyf.as_ref().map(|v| v.len() as u32);
 
         let directory_entries = self.build_directory_entries(&sorted_tables, transformed_glyf_len);
+        let (encoded_directory, directory_size) = self.encode_directory_entries(&directory_entries);
         let uncompressed_data =
-            self.build_uncompressed_data(&sorted_tables, transformed_glyf.as_ref());
+            self.build_uncompressed_data(&sorted_tables, transformed_glyf.as_deref());
         let compressed_data = self.compress(&uncompressed_data)?;
 
         let result = self.build_output(
             &sorted_tables,
-            &directory_entries,
+            &encoded_directory,
+            directory_size,
             &compressed_data,
             major_version,
             minor_version,
@@ -100,10 +109,10 @@ impl<'a> Encoder<'a> {
         if let (Some(glyf), Some(loca), Some(head), Some(maxp)) =
             (glyf_table, loca_table, head_table, maxp_table)
         {
-            let glyf_data = &self.data[glyf.offset as usize..(glyf.offset + glyf.length) as usize];
-            let loca_data = &self.data[loca.offset as usize..(loca.offset + loca.length) as usize];
-            let head_data = &self.data[head.offset as usize..(head.offset + head.length) as usize];
-            let maxp_data = &self.data[maxp.offset as usize..(maxp.offset + maxp.length) as usize];
+            let glyf_data = self.table_slice(glyf);
+            let loca_data = self.table_slice(loca);
+            let head_data = self.table_slice(head);
+            let maxp_data = self.table_slice(maxp);
 
             let transformed = time_section!(
                 "glyf/loca transform",
@@ -125,25 +134,18 @@ impl<'a> Encoder<'a> {
             .map(|t| {
                 let is_glyf = t.tag.is_glyf();
                 let is_loca = t.tag.is_loca();
-
-                let (transform_version, orig_length, transform_length) =
-                    if let Some(tglyf_len) = transformed_glyf_len {
-                        if is_glyf {
-                            (0, t.length, Some(tglyf_len))
-                        } else if is_loca {
-                            (0, t.length, Some(0))
-                        } else {
-                            (0, t.length, None)
-                        }
-                    } else if is_glyf || is_loca {
-                        (3, t.length, None)
-                    } else {
-                        (0, t.length, None)
+                let (transform_version, transform_length) =
+                    match (transformed_glyf_len, is_glyf, is_loca) {
+                        (Some(tglyf_len), true, _) => (0, Some(tglyf_len)),
+                        (Some(_), _, true) => (0, Some(0)),
+                        (Some(_), _, _) => (0, None),
+                        (None, true, _) | (None, _, true) => (3, None),
+                        (None, _, _) => (0, None),
                     };
 
                 TableDirectoryEntry {
                     tag: t.tag,
-                    orig_length,
+                    orig_length: t.length,
                     transform_version,
                     transform_length,
                 }
@@ -151,28 +153,64 @@ impl<'a> Encoder<'a> {
             .collect()
     }
 
+    fn encode_directory_entries(
+        &self,
+        entries: &[TableDirectoryEntry],
+    ) -> (Vec<InlineBytes<15>>, usize) {
+        let mut encoded = Vec::with_capacity(entries.len());
+        let mut size = 0usize;
+        for entry in entries {
+            let bytes = entry.to_bytes();
+            size += bytes.len();
+            encoded.push(bytes);
+        }
+        (encoded, size)
+    }
+
     fn build_uncompressed_data(
         &self,
         sorted_tables: &[&SfntTable],
-        transformed_glyf: Option<&Vec<u8>>,
+        transformed_glyf: Option<&[u8]>,
     ) -> Vec<u8> {
-        let mut uncompressed_data = Vec::new();
-        for table in sorted_tables {
-            let is_glyf = table.tag.is_glyf();
-            let is_loca = table.tag.is_loca();
+        let total_len = match transformed_glyf {
+            Some(tglyf) => {
+                let mut total = 0usize;
+                for table in sorted_tables {
+                    if table.tag.is_glyf() {
+                        total += tglyf.len();
+                        continue;
+                    }
+                    if table.tag.is_loca() {
+                        continue;
+                    }
+                    total += table.length as usize;
+                }
+                total
+            }
+            None => sorted_tables.iter().map(|table| table.length as usize).sum(),
+        };
 
-            if let Some(tglyf) = transformed_glyf {
-                if is_glyf {
-                    uncompressed_data.extend(tglyf);
-                    continue;
-                } else if is_loca {
-                    continue;
+        let mut uncompressed_data = Vec::with_capacity(total_len);
+        match transformed_glyf {
+            Some(tglyf) => {
+                for table in sorted_tables {
+                    if table.tag.is_glyf() {
+                        uncompressed_data.extend_from_slice(tglyf);
+                        continue;
+                    }
+                    if table.tag.is_loca() {
+                        continue;
+                    }
+                    uncompressed_data.extend_from_slice(self.table_slice(table));
                 }
             }
-            let start = table.offset as usize;
-            let end = start + table.length as usize;
-            uncompressed_data.extend_from_slice(&self.data[start..end]);
+            None => {
+                for table in sorted_tables {
+                    uncompressed_data.extend_from_slice(self.table_slice(table));
+                }
+            }
         }
+
         uncompressed_data
     }
 
@@ -212,7 +250,8 @@ impl<'a> Encoder<'a> {
     fn build_output(
         &self,
         sorted_tables: &[&SfntTable],
-        directory_entries: &[TableDirectoryEntry],
+        encoded_directory: &[InlineBytes<15>],
+        directory_size: usize,
         compressed_data: &[u8],
         major_version: u16,
         minor_version: u16,
@@ -220,10 +259,6 @@ impl<'a> Encoder<'a> {
         let total_sfnt_size = 12
             + 16 * self.sfnt.tables.len() as u32
             + sorted_tables.iter().map(|t| (t.length + 3) & !3).sum::<u32>();
-
-        // Calculate directory size without allocating
-        let directory_size: usize =
-            directory_entries.iter().map(|e| e.to_bytes().as_slice().len()).sum();
 
         let total_length = 48 + directory_size as u32 + compressed_data.len() as u32;
 
@@ -246,8 +281,8 @@ impl<'a> Encoder<'a> {
 
         let mut result = Vec::with_capacity(total_length as usize);
         result.extend_from_slice(&header.to_bytes());
-        for entry in directory_entries {
-            result.extend_from_slice(entry.to_bytes().as_slice());
+        for entry in encoded_directory {
+            result.extend_from_slice(entry.as_slice());
         }
         result.extend_from_slice(compressed_data);
         result
