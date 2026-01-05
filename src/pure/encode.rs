@@ -10,22 +10,22 @@ use crate::pure::{
 pub fn encode(ttf_data: &[u8], quality: u32) -> Result<Vec<u8>, String> {
     let sfnt = Sfnt::parse(ttf_data).map_err(|e| e.to_string())?;
 
-    let mut sorted_tables: Vec<_> = sfnt
-        .tables
+    let mut sorted_tables: Vec<_> = sfnt.tables.iter().collect();
+    sorted_tables.sort_by_key(|t| t.tag);
+
+    let (major_version, minor_version) = sorted_tables
         .iter()
-        .map(|t| {
-            let sort_key = match find_tag_index(&t.tag) {
-                Some(idx) => (0, idx as u16, [0u8; 4]),
-                None => (1, 0, t.tag),
-            };
-            (sort_key, t)
+        .find(|t| &t.tag == b"head")
+        .and_then(|head| {
+            let start = head.offset as usize;
+            let data = ttf_data.get(start + 4..start + 8)?;
+            Some((u16::from_be_bytes([data[0], data[1]]), u16::from_be_bytes([data[2], data[3]])))
         })
-        .collect();
-    sorted_tables.sort_by_key(|(key, _)| *key);
+        .unwrap_or((0, 0));
 
     let directory_entries: Vec<TableDirectoryEntry> = sorted_tables
         .iter()
-        .map(|(_, t)| {
+        .map(|t| {
             let tag_index = find_tag_index(&t.tag);
             let is_glyf_or_loca = tag_index == Some(10) || tag_index == Some(11);
             let transform_version = if is_glyf_or_loca { 3 } else { 0 };
@@ -39,20 +39,24 @@ pub fn encode(ttf_data: &[u8], quality: u32) -> Result<Vec<u8>, String> {
         .collect();
 
     let mut uncompressed_data = Vec::new();
-    for (_, table) in &sorted_tables {
+    for table in &sorted_tables {
         let start = table.offset as usize;
         let end = start + table.length as usize;
         uncompressed_data.extend_from_slice(&ttf_data[start..end]);
     }
 
     let mut compressed_data = Vec::new();
-    let params = BrotliEncoderParams { quality: quality as i32, ..Default::default() };
+    let params = BrotliEncoderParams {
+        quality: quality as i32,
+        mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
+        ..Default::default()
+    };
     brotli::enc::BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
         .map_err(|e| format!("Brotli compression failed: {e}"))?;
 
     let total_sfnt_size = 12
         + 16 * sfnt.tables.len() as u32
-        + sorted_tables.iter().map(|(_, t)| t.length).sum::<u32>();
+        + sorted_tables.iter().map(|t| (t.length + 3) & !3).sum::<u32>();
 
     let mut directory_bytes = Vec::new();
     for entry in &directory_entries {
@@ -69,8 +73,8 @@ pub fn encode(ttf_data: &[u8], quality: u32) -> Result<Vec<u8>, String> {
         reserved: 0,
         total_sfnt_size,
         total_compressed_size: compressed_data.len() as u32,
-        major_version: 1,
-        minor_version: 0,
+        major_version,
+        minor_version,
         meta_offset: 0,
         meta_length: 0,
         meta_orig_length: 0,

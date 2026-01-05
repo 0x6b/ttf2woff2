@@ -8,7 +8,7 @@ fn test_pure_encode() {
     let input = root.join("WarpnineSans-Regular.ttf");
     let ttf_data = fs::read(&input).expect("Failed to read TTF file");
 
-    let woff2_data = encode(&ttf_data, 1).expect("Failed to encode");
+    let woff2_data = encode(&ttf_data, 11).expect("Failed to encode");
 
     assert!(!woff2_data.is_empty());
     assert_eq!(&woff2_data[0..4], b"wOF2");
