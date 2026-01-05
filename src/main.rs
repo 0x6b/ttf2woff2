@@ -18,7 +18,7 @@ struct Args {
     output: Option<PathBuf>,
 
     /// Brotli compression quality (0-11)
-    #[arg(short, long, default_value = "11")]
+    #[arg(short, long, default_value = "9")]
     quality: u8,
 }
 
