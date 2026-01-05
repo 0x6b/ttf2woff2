@@ -26,19 +26,13 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
     // Case 1: x == 0 && abs_y < 1280
     if x == 0 && abs_y < 1280 {
         let flag = on_curve_bit + ((abs_y & 0xF00) >> 7) as u8 + y_sign;
-        return (
-            flag,
-            TripletData { data: [(abs_y & 0xFF) as u8, 0, 0, 0], len: 1 },
-        );
+        return (flag, TripletData { data: [(abs_y & 0xFF) as u8, 0, 0, 0], len: 1 });
     }
 
     // Case 2: y == 0 && abs_x < 1280
     if y == 0 && abs_x < 1280 {
         let flag = on_curve_bit + 10 + ((abs_x & 0xF00) >> 7) as u8 + x_sign;
-        return (
-            flag,
-            TripletData { data: [(abs_x & 0xFF) as u8, 0, 0, 0], len: 1 },
-        );
+        return (flag, TripletData { data: [(abs_x & 0xFF) as u8, 0, 0, 0], len: 1 });
     }
 
     // Case 3: abs_x in 1..65 && abs_y in 1..65

@@ -1,10 +1,10 @@
 # ttf2woff2
 
-A Pure Rust library and CLI for compressing TTF/OTF fonts to WOFF2 format.
+A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
 
 ## Features
 
-- Pure Rust - No C/C++ dependencies
+- Pure Rust - No C/C++ or Python dependencies
 - glyf/loca transformation - Achieves compression comparable to Google's woff2
 - 100% glyph fidelity - All glyph shapes are preserved exactly
 - Compatible with [fonttools](https://github.com/fonttools/fonttools) output

@@ -1,5 +1,4 @@
 pub const TTF_FLAVOR: u32 = 0x00010000;
-pub const CFF_FLAVOR: u32 = 0x4F54544F; // 'OTTO'
 
 pub struct SfntTable {
     pub tag: [u8; 4],
@@ -21,8 +20,8 @@ impl Sfnt {
         let flavor = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
         let num_tables = u16::from_be_bytes([data[4], data[5]]) as usize;
 
-        if flavor != TTF_FLAVOR && flavor != CFF_FLAVOR {
-            return Err("Invalid SFNT flavor");
+        if flavor != TTF_FLAVOR {
+            return Err("Only TrueType fonts (TTF) are supported; OTF/CFF fonts are not supported");
         }
 
         let required_len = 12 + num_tables * 16;

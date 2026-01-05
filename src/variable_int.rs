@@ -56,11 +56,20 @@ pub fn encode_255_u_int16(value: u16) -> EncodedInt {
     if value < 253 {
         EncodedInt { data: [value as u8, 0, 0, 0, 0], len: 1 }
     } else if value < 506 {
-        EncodedInt { data: [ONE_MORE_BYTE_CODE1, (value - 253) as u8, 0, 0, 0], len: 2 }
+        EncodedInt {
+            data: [ONE_MORE_BYTE_CODE1, (value - 253) as u8, 0, 0, 0],
+            len: 2,
+        }
     } else if value < 762 {
-        EncodedInt { data: [ONE_MORE_BYTE_CODE2, (value - 506) as u8, 0, 0, 0], len: 2 }
+        EncodedInt {
+            data: [ONE_MORE_BYTE_CODE2, (value - 506) as u8, 0, 0, 0],
+            len: 2,
+        }
     } else {
-        EncodedInt { data: [WORD_CODE, (value >> 8) as u8, (value & 0xFF) as u8, 0, 0], len: 3 }
+        EncodedInt {
+            data: [WORD_CODE, (value >> 8) as u8, (value & 0xFF) as u8, 0, 0],
+            len: 3,
+        }
     }
 }
 
