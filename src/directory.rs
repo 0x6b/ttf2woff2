@@ -22,14 +22,14 @@ impl TableDirectoryEntry {
             result.extend_from_slice(&self.tag);
         }
 
-        result.extend(encode_base128(self.orig_length));
+        result.extend_from_slice(encode_base128(self.orig_length).as_slice());
 
         let is_glyf_or_loca = tag_index == Some(10) || tag_index == Some(11);
         if is_glyf_or_loca
             && self.transform_version == 0
             && let Some(tlen) = self.transform_length
         {
-            result.extend(encode_base128(tlen));
+            result.extend_from_slice(encode_base128(tlen).as_slice());
         }
 
         result

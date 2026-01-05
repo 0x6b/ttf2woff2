@@ -50,17 +50,17 @@ pub struct TransformedGlyf {
 }
 
 impl TransformedGlyf {
-    pub fn new(num_glyphs: u16) -> Self {
+    pub fn new(num_glyphs: u16, glyf_size: usize) -> Self {
         let bbox_bitmap_size = ((num_glyphs as usize + 31) >> 5) << 2;
         Self {
-            n_contour_stream: Vec::new(),
-            n_points_stream: Vec::new(),
-            flag_stream: Vec::new(),
-            glyph_stream: Vec::new(),
-            composite_stream: Vec::new(),
+            n_contour_stream: Vec::with_capacity(num_glyphs as usize * 2),
+            n_points_stream: Vec::with_capacity(glyf_size / 4),
+            flag_stream: Vec::with_capacity(glyf_size / 2),
+            glyph_stream: Vec::with_capacity(glyf_size),
+            composite_stream: Vec::with_capacity(glyf_size / 8),
             bbox_bitmap: vec![0u8; bbox_bitmap_size],
-            bbox_stream: Vec::new(),
-            instruction_stream: Vec::new(),
+            bbox_stream: Vec::with_capacity(num_glyphs as usize),
+            instruction_stream: Vec::with_capacity(glyf_size / 4),
         }
     }
 
@@ -263,7 +263,9 @@ fn encode_simple_glyph(glyph: &SimpleGlyph, glyph_id: u16, streams: &mut Transfo
     let mut start = 0u16;
     for &end in &glyph.end_pts {
         let n_points = end - start + 1;
-        streams.n_points_stream.extend(encode_255_u_int16(n_points));
+        streams
+            .n_points_stream
+            .extend_from_slice(encode_255_u_int16(n_points).as_slice());
         start = end + 1;
     }
 
@@ -274,14 +276,14 @@ fn encode_simple_glyph(glyph: &SimpleGlyph, glyph_id: u16, streams: &mut Transfo
         let dy = y.wrapping_sub(prev_y);
         let (flag, triplet) = encode_triplet(dx, dy, on_curve);
         streams.flag_stream.push(flag);
-        streams.glyph_stream.extend(triplet);
+        streams.glyph_stream.extend_from_slice(triplet.as_slice());
         prev_x = x;
         prev_y = y;
     }
 
     streams
         .glyph_stream
-        .extend(encode_255_u_int16(glyph.instructions.len() as u16));
+        .extend_from_slice(encode_255_u_int16(glyph.instructions.len() as u16).as_slice());
     streams.instruction_stream.extend(&glyph.instructions);
 
     let (calc_x_min, calc_y_min, calc_x_max, calc_y_max) = compute_bbox(&glyph.points);
@@ -336,7 +338,7 @@ pub fn transform_glyf(
     let index_format = read_i16_be(head_data, 50);
 
     let offsets = get_glyph_offsets(loca_data, index_format, num_glyphs);
-    let mut streams = TransformedGlyf::new(num_glyphs);
+    let mut streams = TransformedGlyf::new(num_glyphs, glyf_data.len());
 
     #[cfg(feature = "timing")]
     let glyph_start = Instant::now();
