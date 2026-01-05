@@ -1,24 +1,27 @@
 use brotli::enc::BrotliEncoderParams;
 
-use crate::pure::{
-    directory::TableDirectoryEntry,
-    header::{WOFF2_SIGNATURE, Woff2Header},
-    known_tags::find_tag_index,
-    sfnt::Sfnt,
-    transform::glyf::transform_glyf,
+use crate::{
+    BrotliQuality,
+    pure::{
+        directory::TableDirectoryEntry,
+        header::{WOFF2_SIGNATURE, Woff2Header},
+        known_tags::find_tag_index,
+        sfnt::Sfnt,
+        transform::glyf::transform_glyf,
+    },
 };
 
-pub fn encode(ttf_data: &[u8], quality: u32) -> Result<Vec<u8>, String> {
+pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, String> {
     encode_with_options(ttf_data, quality, true)
 }
 
-pub fn encode_no_transform(ttf_data: &[u8], quality: u32) -> Result<Vec<u8>, String> {
+pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, String> {
     encode_with_options(ttf_data, quality, false)
 }
 
 fn encode_with_options(
     ttf_data: &[u8],
-    quality: u32,
+    quality: BrotliQuality,
     transform_glyf_loca: bool,
 ) -> Result<Vec<u8>, String> {
     let sfnt = Sfnt::parse(ttf_data).map_err(|e| e.to_string())?;
@@ -109,7 +112,7 @@ fn encode_with_options(
 
     let mut compressed_data = Vec::new();
     let params = BrotliEncoderParams {
-        quality: quality as i32,
+        quality: quality.into(),
         mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
         ..Default::default()
     };

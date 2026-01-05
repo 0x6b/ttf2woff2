@@ -1,8 +1,9 @@
 use std::fs;
 
-use ttf2woff2::pure::encode;
+use ttf2woff2::{BrotliQuality, pure::encode};
 
-fn encode_font(name: &str, quality: u32) {
+fn encode_font(name: &str, quality: u8) {
+    let quality = BrotliQuality::from(quality);
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests");
     let input = root.join(format!("{name}.ttf"));
     let ttf_data = fs::read(&input).expect("Failed to read TTF file");
