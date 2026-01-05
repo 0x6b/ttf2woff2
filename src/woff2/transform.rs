@@ -192,72 +192,6 @@ struct SimpleGlyph {
 }
 
 impl SimpleGlyph {
-    fn parse(data: &[u8], num_contours: i16) -> Result<Self, Error> {
-        if data.len() < 10 {
-            return Err(Error::InvalidGlyph("data too short"));
-        }
-
-        let mut cursor = Cursor::new(data);
-        cursor.set_position(2); // Skip num_contours
-
-        let x_min = cursor
-            .read_i16::<BigEndian>()
-            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
-        let y_min = cursor
-            .read_i16::<BigEndian>()
-            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
-        let x_max = cursor
-            .read_i16::<BigEndian>()
-            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
-        let y_max = cursor
-            .read_i16::<BigEndian>()
-            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
-
-        let mut end_pts = Vec::with_capacity(num_contours as usize);
-        for _ in 0..num_contours {
-            let ep = cursor
-                .read_u16::<BigEndian>()
-                .map_err(|_| Error::InvalidGlyph("unexpected end of data"))?;
-            end_pts.push(ep);
-        }
-
-        let num_points =
-            if num_contours > 0 { end_pts[num_contours as usize - 1] as usize + 1 } else { 0 };
-
-        let instruction_length = cursor
-            .read_u16::<BigEndian>()
-            .map_err(|_| Error::InvalidGlyph("unexpected end of data"))?
-            as usize;
-
-        let offset = cursor.position() as usize;
-        if offset + instruction_length > data.len() {
-            return Err(Error::InvalidGlyph("instruction data exceeds bounds"));
-        }
-        let instructions = data[offset..offset + instruction_length].to_vec();
-        cursor.set_position((offset + instruction_length) as u64);
-
-        let flags = Self::parse_flags(&mut cursor, data, num_points)?;
-        let x_coords = Self::parse_x_coords(&mut cursor, data, &flags)?;
-        let y_coords = Self::parse_y_coords(&mut cursor, data, &flags)?;
-
-        let mut points = Vec::with_capacity(num_points);
-        for i in 0..num_points {
-            let on_curve = flags[i] & 0x01 != 0;
-            points.push((x_coords[i], y_coords[i], on_curve));
-        }
-
-        Ok(Self {
-            num_contours,
-            x_min,
-            y_min,
-            x_max,
-            y_max,
-            end_pts,
-            instructions,
-            points,
-        })
-    }
-
     fn parse_flags(
         cursor: &mut Cursor<&[u8]>,
         data: &[u8],
@@ -338,17 +272,81 @@ impl SimpleGlyph {
         if self.points.is_empty() {
             return (0, 0, 0, 0);
         }
-        let mut x_min = i16::MAX;
-        let mut y_min = i16::MAX;
-        let mut x_max = i16::MIN;
-        let mut y_max = i16::MIN;
-        for &(x, y, _) in &self.points {
-            x_min = x_min.min(x);
-            y_min = y_min.min(y);
-            x_max = x_max.max(x);
-            y_max = y_max.max(y);
-        }
+        let x_min = self.points.iter().map(|(x, _, _)| *x).min().unwrap_or(0);
+        let y_min = self.points.iter().map(|(_, y, _)| *y).min().unwrap_or(0);
+        let x_max = self.points.iter().map(|(x, _, _)| *x).max().unwrap_or(0);
+        let y_max = self.points.iter().map(|(_, y, _)| *y).max().unwrap_or(0);
         (x_min, y_min, x_max, y_max)
+    }
+}
+
+impl TryFrom<(&[u8], i16)> for SimpleGlyph {
+    type Error = Error;
+
+    fn try_from((data, num_contours): (&[u8], i16)) -> Result<Self, Self::Error> {
+        if data.len() < 10 {
+            return Err(Error::InvalidGlyph("data too short"));
+        }
+
+        let mut cursor = Cursor::new(data);
+        cursor.set_position(2); // Skip num_contours
+
+        let x_min = cursor
+            .read_i16::<BigEndian>()
+            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
+        let y_min = cursor
+            .read_i16::<BigEndian>()
+            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
+        let x_max = cursor
+            .read_i16::<BigEndian>()
+            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
+        let y_max = cursor
+            .read_i16::<BigEndian>()
+            .map_err(|_| Error::InvalidGlyph("failed to read bbox"))?;
+
+        let mut end_pts = Vec::with_capacity(num_contours as usize);
+        for _ in 0..num_contours {
+            let ep = cursor
+                .read_u16::<BigEndian>()
+                .map_err(|_| Error::InvalidGlyph("unexpected end of data"))?;
+            end_pts.push(ep);
+        }
+
+        let num_points =
+            if num_contours > 0 { end_pts[num_contours as usize - 1] as usize + 1 } else { 0 };
+
+        let instruction_length = cursor
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::InvalidGlyph("unexpected end of data"))?
+            as usize;
+
+        let offset = cursor.position() as usize;
+        if offset + instruction_length > data.len() {
+            return Err(Error::InvalidGlyph("instruction data exceeds bounds"));
+        }
+        let instructions = data[offset..offset + instruction_length].to_vec();
+        cursor.set_position((offset + instruction_length) as u64);
+
+        let flags = Self::parse_flags(&mut cursor, data, num_points)?;
+        let x_coords = Self::parse_x_coords(&mut cursor, data, &flags)?;
+        let y_coords = Self::parse_y_coords(&mut cursor, data, &flags)?;
+
+        let mut points = Vec::with_capacity(num_points);
+        for i in 0..num_points {
+            let on_curve = flags[i] & 0x01 != 0;
+            points.push((x_coords[i], y_coords[i], on_curve));
+        }
+
+        Ok(Self {
+            num_contours,
+            x_min,
+            y_min,
+            x_max,
+            y_max,
+            end_pts,
+            instructions,
+            points,
+        })
     }
 }
 
@@ -399,55 +397,59 @@ impl Iterator for GlyphOffsetIter<'_> {
 
 impl ExactSizeIterator for GlyphOffsetIter<'_> {}
 
-pub(crate) fn transform_glyf(
-    glyf_data: &[u8],
-    loca_data: &[u8],
-    head_data: &[u8],
-    maxp_data: &[u8],
-) -> Result<Vec<u8>, Error> {
-    if maxp_data.len() < 6 {
-        return Err(Error::DataTooShort { context: "maxp table" });
-    }
-    let mut cursor = Cursor::new(maxp_data);
-    cursor.set_position(4);
-    let num_glyphs = cursor
-        .read_u16::<BigEndian>()
-        .map_err(|_| Error::DataTooShort { context: "maxp table" })?;
+pub(super) struct GlyfContext<'a> {
+    pub glyf: &'a [u8],
+    pub loca: &'a [u8],
+    pub head: &'a [u8],
+    pub maxp: &'a [u8],
+}
 
-    if head_data.len() < 52 {
-        return Err(Error::DataTooShort { context: "head table" });
-    }
-    let mut cursor = Cursor::new(head_data);
-    cursor.set_position(50);
-    let index_format = cursor
-        .read_i16::<BigEndian>()
-        .map_err(|_| Error::DataTooShort { context: "head table" })?;
+impl GlyfContext<'_> {
+    pub(super) fn transform(&self) -> Result<Vec<u8>, Error> {
+        if self.maxp.len() < 6 {
+            return Err(Error::DataTooShort { context: "maxp table" });
+        }
+        let mut cursor = Cursor::new(self.maxp);
+        cursor.set_position(4);
+        let num_glyphs = cursor
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::DataTooShort { context: "maxp table" })?;
 
-    let mut streams = TransformedGlyf::new(num_glyphs, glyf_data.len());
+        if self.head.len() < 52 {
+            return Err(Error::DataTooShort { context: "head table" });
+        }
+        let mut cursor = Cursor::new(self.head);
+        cursor.set_position(50);
+        let index_format = cursor
+            .read_i16::<BigEndian>()
+            .map_err(|_| Error::DataTooShort { context: "head table" })?;
 
-    for (glyph_id, (start, end)) in
-        GlyphOffsetIter::new(loca_data, index_format, num_glyphs).enumerate()
-    {
-        if start == end {
-            streams.push_empty();
-            continue;
+        let mut streams = TransformedGlyf::new(num_glyphs, self.glyf.len());
+
+        for (glyph_id, (start, end)) in
+            GlyphOffsetIter::new(self.loca, index_format, num_glyphs).enumerate()
+        {
+            if start == end {
+                streams.push_empty();
+                continue;
+            }
+
+            let glyph_data = &self.glyf[start as usize..end as usize];
+            if glyph_data.len() < 2 {
+                streams.push_empty();
+                continue;
+            }
+
+            let num_contours = i16::from_be_bytes([glyph_data[0], glyph_data[1]]);
+
+            if num_contours >= 0 {
+                let glyph: SimpleGlyph = (glyph_data, num_contours).try_into()?;
+                streams.encode_simple(glyph_id as u16, &glyph);
+            } else {
+                streams.encode_composite(glyph_id as u16, glyph_data);
+            }
         }
 
-        let glyph_data = &glyf_data[start as usize..end as usize];
-        if glyph_data.len() < 2 {
-            streams.push_empty();
-            continue;
-        }
-
-        let num_contours = i16::from_be_bytes([glyph_data[0], glyph_data[1]]);
-
-        if num_contours >= 0 {
-            let glyph = SimpleGlyph::parse(glyph_data, num_contours)?;
-            streams.encode_simple(glyph_id as u16, &glyph);
-        } else {
-            streams.encode_composite(glyph_id as u16, glyph_data);
-        }
+        Ok(streams.finish(index_format as u16))
     }
-
-    Ok(streams.finish(index_format as u16))
 }

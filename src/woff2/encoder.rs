@@ -6,7 +6,7 @@ use super::{
     header::{WOFF2_SIGNATURE, Woff2Header},
     inline_bytes::InlineBytes,
     sfnt::{Sfnt, SfntTable},
-    transform::transform_glyf,
+    transform::GlyfContext,
 };
 use crate::Error;
 
@@ -60,12 +60,14 @@ impl<'a> TableRefs<'a> {
     fn from_sorted(sorted_tables: &[&'a SfntTable]) -> Self {
         let mut refs = Self { glyf: None, loca: None, head: None, maxp: None };
         for &table in sorted_tables {
-            match () {
-                _ if table.tag.is_glyf() => refs.glyf = Some(table),
-                _ if table.tag.is_loca() => refs.loca = Some(table),
-                _ if table.tag.is_head() => refs.head = Some(table),
-                _ if table.tag.is_maxp() => refs.maxp = Some(table),
-                _ => {}
+            if table.tag.is_glyf() {
+                refs.glyf = Some(table);
+            } else if table.tag.is_loca() {
+                refs.loca = Some(table);
+            } else if table.tag.is_head() {
+                refs.head = Some(table);
+            } else if table.tag.is_maxp() {
+                refs.maxp = Some(table);
             }
         }
         refs
@@ -74,7 +76,7 @@ impl<'a> TableRefs<'a> {
 
 impl<'a> Encoder<'a> {
     fn new(data: &'a [u8], options: EncodeOptions) -> Result<Self, Error> {
-        let sfnt = time_section!("SFNT parsing", Sfnt::parse(data)?);
+        let sfnt: Sfnt = time_section!("SFNT parsing", data.try_into()?);
         Ok(Self { data, sfnt, options })
     }
 
@@ -113,7 +115,13 @@ impl<'a> Encoder<'a> {
 
             let transformed = time_section!(
                 "glyf/loca transform",
-                transform_glyf(glyf_data, loca_data, head_data, maxp_data)?
+                GlyfContext {
+                    glyf: glyf_data,
+                    loca: loca_data,
+                    head: head_data,
+                    maxp: maxp_data
+                }
+                .transform()?
             );
             return Ok(Some(transformed));
         }
@@ -154,13 +162,8 @@ impl<'a> Encoder<'a> {
         &self,
         entries: &[TableDirectoryEntry],
     ) -> (Vec<InlineBytes<15>>, usize) {
-        let mut encoded = Vec::with_capacity(entries.len());
-        let mut size = 0usize;
-        for entry in entries {
-            let bytes = InlineBytes::from(entry);
-            size += bytes.len();
-            encoded.push(bytes);
-        }
+        let encoded: Vec<_> = entries.iter().map(InlineBytes::from).collect();
+        let size = encoded.iter().map(InlineBytes::len).sum();
         (encoded, size)
     }
 
@@ -169,46 +172,26 @@ impl<'a> Encoder<'a> {
         sorted_tables: &[&SfntTable],
         transformed_glyf: Option<&[u8]>,
     ) -> Vec<u8> {
-        let total_len = match transformed_glyf {
-            Some(tglyf) => {
-                let mut total = 0usize;
-                for table in sorted_tables {
-                    if table.tag.is_glyf() {
-                        total += tglyf.len();
-                        continue;
-                    }
+        let slices: Vec<&[u8]> = match transformed_glyf {
+            Some(tglyf) => sorted_tables
+                .iter()
+                .filter_map(|table| {
                     if table.tag.is_loca() {
-                        continue;
+                        None
+                    } else if table.tag.is_glyf() {
+                        Some(tglyf)
+                    } else {
+                        Some(self.table_slice(table))
                     }
-                    total += table.length as usize;
-                }
-                total
-            }
-            None => sorted_tables.iter().map(|table| table.length as usize).sum(),
+                })
+                .collect(),
+            None => sorted_tables.iter().map(|t| self.table_slice(t)).collect(),
         };
 
-        let mut uncompressed_data = Vec::with_capacity(total_len);
-        match transformed_glyf {
-            Some(tglyf) => {
-                for table in sorted_tables {
-                    if table.tag.is_glyf() {
-                        uncompressed_data.extend_from_slice(tglyf);
-                        continue;
-                    }
-                    if table.tag.is_loca() {
-                        continue;
-                    }
-                    uncompressed_data.extend_from_slice(self.table_slice(table));
-                }
-            }
-            None => {
-                for table in sorted_tables {
-                    uncompressed_data.extend_from_slice(self.table_slice(table));
-                }
-            }
-        }
-
-        uncompressed_data
+        let total_len: usize = slices.iter().map(|s| s.len()).sum();
+        let mut data = Vec::with_capacity(total_len);
+        slices.iter().for_each(|s| data.extend_from_slice(s));
+        data
     }
 
     fn compress(&self, uncompressed_data: &[u8]) -> Result<Vec<u8>, Error> {

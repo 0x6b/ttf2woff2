@@ -18,8 +18,10 @@ pub(crate) struct Sfnt {
     pub tables: Vec<SfntTable>,
 }
 
-impl Sfnt {
-    pub fn parse(data: &[u8]) -> Result<Self, Error> {
+impl TryFrom<&[u8]> for Sfnt {
+    type Error = Error;
+
+    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
         let mut cursor = Cursor::new(data);
 
         let flavor = cursor
@@ -30,7 +32,6 @@ impl Sfnt {
             .map_err(|_| Error::DataTooShort { context: "SFNT header" })?
             as usize;
 
-        // Skip search_range, entry_selector, range_shift (6 bytes)
         cursor.set_position(12);
 
         if flavor != TTF_FLAVOR {
