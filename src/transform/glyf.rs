@@ -152,16 +152,26 @@ impl TransformedGlyf {
             instruction_stream_size: self.instruction_stream.len() as u32,
         };
 
-        let mut output = Vec::new();
+        let total_size = 36
+            + self.n_contour_stream.len()
+            + self.n_points_stream.len()
+            + self.flag_stream.len()
+            + self.glyph_stream.len()
+            + self.composite_stream.len()
+            + self.bbox_bitmap.len()
+            + self.bbox_stream.len()
+            + self.instruction_stream.len();
+
+        let mut output = Vec::with_capacity(total_size);
         output.extend_from_slice(&header.to_bytes());
-        output.extend(&self.n_contour_stream);
-        output.extend(&self.n_points_stream);
-        output.extend(&self.flag_stream);
-        output.extend(&self.glyph_stream);
-        output.extend(&self.composite_stream);
-        output.extend(&self.bbox_bitmap);
-        output.extend(&self.bbox_stream);
-        output.extend(&self.instruction_stream);
+        output.extend_from_slice(&self.n_contour_stream);
+        output.extend_from_slice(&self.n_points_stream);
+        output.extend_from_slice(&self.flag_stream);
+        output.extend_from_slice(&self.glyph_stream);
+        output.extend_from_slice(&self.composite_stream);
+        output.extend_from_slice(&self.bbox_bitmap);
+        output.extend_from_slice(&self.bbox_stream);
+        output.extend_from_slice(&self.instruction_stream);
 
         output
     }
@@ -354,26 +364,52 @@ impl SimpleGlyph {
     }
 }
 
-fn get_glyph_offsets(loca_data: &[u8], index_format: i16, num_glyphs: u16) -> Vec<(u32, u32)> {
-    let mut offsets = Vec::with_capacity(num_glyphs as usize);
-    let mut cursor = Cursor::new(loca_data);
+struct GlyphOffsetIter<'a> {
+    cursor: Cursor<&'a [u8]>,
+    index_format: i16,
+    remaining: u16,
+}
 
-    for _ in 0..num_glyphs {
-        let (start, end) = if index_format == 0 {
-            let s = cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
-            let e = cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
-            cursor.set_position(cursor.position() - 2);
+impl<'a> GlyphOffsetIter<'a> {
+    fn new(loca_data: &'a [u8], index_format: i16, num_glyphs: u16) -> Self {
+        Self {
+            cursor: Cursor::new(loca_data),
+            index_format,
+            remaining: num_glyphs,
+        }
+    }
+}
+
+impl Iterator for GlyphOffsetIter<'_> {
+    type Item = (u32, u32);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remaining == 0 {
+            return None;
+        }
+        self.remaining -= 1;
+
+        let (start, end) = if self.index_format == 0 {
+            let s = self.cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
+            let e = self.cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
+            self.cursor.set_position(self.cursor.position() - 2);
             (s, e)
         } else {
-            let s = cursor.read_u32::<BigEndian>().unwrap_or(0);
-            let e = cursor.read_u32::<BigEndian>().unwrap_or(0);
-            cursor.set_position(cursor.position() - 4);
+            let s = self.cursor.read_u32::<BigEndian>().unwrap_or(0);
+            let e = self.cursor.read_u32::<BigEndian>().unwrap_or(0);
+            self.cursor.set_position(self.cursor.position() - 4);
             (s, e)
         };
-        offsets.push((start, end));
+        Some((start, end))
     }
-    offsets
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.remaining as usize;
+        (len, Some(len))
+    }
 }
+
+impl ExactSizeIterator for GlyphOffsetIter<'_> {}
 
 pub fn transform_glyf(
     glyf_data: &[u8],
@@ -399,10 +435,11 @@ pub fn transform_glyf(
         .read_i16::<BigEndian>()
         .map_err(|_| Error::DataTooShort { context: "head table" })?;
 
-    let offsets = get_glyph_offsets(loca_data, index_format, num_glyphs);
     let mut streams = TransformedGlyf::new(num_glyphs, glyf_data.len());
 
-    for (glyph_id, &(start, end)) in offsets.iter().enumerate() {
+    for (glyph_id, (start, end)) in
+        GlyphOffsetIter::new(loca_data, index_format, num_glyphs).enumerate()
+    {
         if start == end {
             streams.push_empty();
             continue;

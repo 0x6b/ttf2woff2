@@ -221,12 +221,11 @@ impl<'a> Encoder<'a> {
             + 16 * self.sfnt.tables.len() as u32
             + sorted_tables.iter().map(|t| (t.length + 3) & !3).sum::<u32>();
 
-        let mut directory_bytes = Vec::new();
-        for entry in directory_entries {
-            directory_bytes.extend(entry.to_bytes());
-        }
+        // Calculate directory size without allocating
+        let directory_size: usize =
+            directory_entries.iter().map(|e| e.to_bytes().as_slice().len()).sum();
 
-        let total_length = 48 + directory_bytes.len() as u32 + compressed_data.len() as u32;
+        let total_length = 48 + directory_size as u32 + compressed_data.len() as u32;
 
         let header = Woff2Header {
             signature: WOFF2_SIGNATURE,
@@ -247,8 +246,10 @@ impl<'a> Encoder<'a> {
 
         let mut result = Vec::with_capacity(total_length as usize);
         result.extend_from_slice(&header.to_bytes());
-        result.extend(&directory_bytes);
-        result.extend(compressed_data);
+        for entry in directory_entries {
+            result.extend_from_slice(entry.to_bytes().as_slice());
+        }
+        result.extend_from_slice(compressed_data);
         result
     }
 }
