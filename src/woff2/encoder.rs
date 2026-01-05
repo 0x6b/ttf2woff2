@@ -238,6 +238,17 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
         let mut sorted_tables: Vec<_> = encoder.sfnt.tables.iter().collect();
         sorted_tables.sort_by_key(|t| t.tag);
 
+        // WOFF2 spec requires loca to immediately follow glyf in the table directory
+        if let Some(glyf_pos) = sorted_tables.iter().position(|t| t.tag.is_glyf()) {
+            if let Some(loca_pos) = sorted_tables.iter().position(|t| t.tag.is_loca()) {
+                if loca_pos != glyf_pos + 1 {
+                    let loca = sorted_tables.remove(loca_pos);
+                    let new_glyf_pos = sorted_tables.iter().position(|t| t.tag.is_glyf()).unwrap();
+                    sorted_tables.insert(new_glyf_pos + 1, loca);
+                }
+            }
+        }
+
         let table_refs = TableRefs::from_sorted(&sorted_tables);
         let (major_version, minor_version) = encoder.extract_version(&table_refs);
         let transformed_glyf = encoder.transform_glyf_if_needed(&table_refs)?;
