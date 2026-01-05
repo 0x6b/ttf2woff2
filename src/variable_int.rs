@@ -1,23 +1,13 @@
-/// Encoded variable integer - up to 5 bytes for base128, 3 bytes for 255UInt16
-#[derive(Clone, Copy)]
-pub struct EncodedInt {
-    data: [u8; 5],
-    len: u8,
-}
+use crate::util::InlineBytes;
 
-impl EncodedInt {
-    #[inline]
-    pub fn as_slice(&self) -> &[u8] {
-        &self.data[..self.len as usize]
-    }
-}
+/// Encoded variable integer - up to 5 bytes for base128, 3 bytes for 255UInt16
+pub type EncodedInt = InlineBytes<5>;
 
 /// UIntBase128 encoding per WOFF2 spec.
-/// Each byte uses 7 bits for data, MSB is continuation flag.
 #[inline]
 pub fn encode_base128(mut value: u32) -> EncodedInt {
     if value == 0 {
-        return EncodedInt { data: [0, 0, 0, 0, 0], len: 1 };
+        return InlineBytes::new([0, 0, 0, 0, 0], 1);
     }
 
     let mut result = [0u8; 5];
@@ -39,11 +29,11 @@ pub fn encode_base128(mut value: u32) -> EncodedInt {
     }
 
     // Set continuation bits
-    for i in 0..(len as usize - 1) {
-        result[i] |= 0x80;
+    for item in result.iter_mut().take(len as usize - 1) {
+        *item |= 0x80;
     }
 
-    EncodedInt { data: result, len }
+    InlineBytes::new(result, len)
 }
 
 /// 255UInt16 encoding per WOFF2 spec.
@@ -54,22 +44,13 @@ pub fn encode_255_u_int16(value: u16) -> EncodedInt {
     const WORD_CODE: u8 = 255;
 
     if value < 253 {
-        EncodedInt { data: [value as u8, 0, 0, 0, 0], len: 1 }
+        InlineBytes::new([value as u8, 0, 0, 0, 0], 1)
     } else if value < 506 {
-        EncodedInt {
-            data: [ONE_MORE_BYTE_CODE1, (value - 253) as u8, 0, 0, 0],
-            len: 2,
-        }
+        InlineBytes::new([ONE_MORE_BYTE_CODE1, (value - 253) as u8, 0, 0, 0], 2)
     } else if value < 762 {
-        EncodedInt {
-            data: [ONE_MORE_BYTE_CODE2, (value - 506) as u8, 0, 0, 0],
-            len: 2,
-        }
+        InlineBytes::new([ONE_MORE_BYTE_CODE2, (value - 506) as u8, 0, 0, 0], 2)
     } else {
-        EncodedInt {
-            data: [WORD_CODE, (value >> 8) as u8, (value & 0xFF) as u8, 0, 0],
-            len: 3,
-        }
+        InlineBytes::new([WORD_CODE, (value >> 8) as u8, (value & 0xFF) as u8, 0, 0], 3)
     }
 }
 

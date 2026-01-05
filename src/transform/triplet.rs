@@ -1,16 +1,7 @@
-/// Triplet encoding result - up to 4 bytes, stored inline to avoid heap allocation
-#[derive(Clone, Copy)]
-pub struct TripletData {
-    data: [u8; 4],
-    len: u8,
-}
+use crate::util::InlineBytes;
 
-impl TripletData {
-    #[inline]
-    pub fn as_slice(&self) -> &[u8] {
-        &self.data[..self.len as usize]
-    }
-}
+/// Triplet encoding result - up to 4 bytes, stored inline to avoid heap allocation
+pub type TripletData = InlineBytes<4>;
 
 /// Encode a coordinate delta pair using WOFF2 triplet encoding.
 /// Returns (flag_byte, triplet_bytes).
@@ -26,13 +17,13 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
     // Case 1: x == 0 && abs_y < 1280
     if x == 0 && abs_y < 1280 {
         let flag = on_curve_bit + ((abs_y & 0xF00) >> 7) as u8 + y_sign;
-        return (flag, TripletData { data: [(abs_y & 0xFF) as u8, 0, 0, 0], len: 1 });
+        return (flag, InlineBytes::new([(abs_y & 0xFF) as u8, 0, 0, 0], 1));
     }
 
     // Case 2: y == 0 && abs_x < 1280
     if y == 0 && abs_x < 1280 {
         let flag = on_curve_bit + 10 + ((abs_x & 0xF00) >> 7) as u8 + x_sign;
-        return (flag, TripletData { data: [(abs_x & 0xFF) as u8, 0, 0, 0], len: 1 });
+        return (flag, InlineBytes::new([(abs_x & 0xFF) as u8, 0, 0, 0], 1));
     }
 
     // Case 3: abs_x in 1..65 && abs_y in 1..65
@@ -43,7 +34,7 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
             + ((((abs_y - 1) & 0x30) >> 2) as u8)
             + xy_signs;
         let triplet = ((((abs_x - 1) & 0xF) << 4) | ((abs_y - 1) & 0xF)) as u8;
-        return (flag, TripletData { data: [triplet, 0, 0, 0], len: 1 });
+        return (flag, InlineBytes::new([triplet, 0, 0, 0], 1));
     }
 
     // Case 4: abs_x in 1..769 && abs_y in 1..769
@@ -55,10 +46,7 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
             + xy_signs;
         return (
             flag,
-            TripletData {
-                data: [((abs_x - 1) & 0xFF) as u8, ((abs_y - 1) & 0xFF) as u8, 0, 0],
-                len: 2,
-            },
+            InlineBytes::new([((abs_x - 1) & 0xFF) as u8, ((abs_y - 1) & 0xFF) as u8, 0, 0], 2),
         );
     }
 
@@ -67,15 +55,15 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
         let flag = on_curve_bit + 120 + xy_signs;
         return (
             flag,
-            TripletData {
-                data: [
+            InlineBytes::new(
+                [
                     (abs_x >> 4) as u8,
                     (((abs_x & 0xF) << 4) | (abs_y >> 8)) as u8,
                     (abs_y & 0xFF) as u8,
                     0,
                 ],
-                len: 3,
-            },
+                3,
+            ),
         );
     }
 
@@ -83,15 +71,10 @@ pub fn encode_triplet(x: i16, y: i16, on_curve: bool) -> (u8, TripletData) {
     let flag = on_curve_bit + 124 + xy_signs;
     (
         flag,
-        TripletData {
-            data: [
-                (abs_x >> 8) as u8,
-                (abs_x & 0xFF) as u8,
-                (abs_y >> 8) as u8,
-                (abs_y & 0xFF) as u8,
-            ],
-            len: 4,
-        },
+        InlineBytes::new(
+            [(abs_x >> 8) as u8, (abs_x & 0xFF) as u8, (abs_y >> 8) as u8, (abs_y & 0xFF) as u8],
+            4,
+        ),
     )
 }
 

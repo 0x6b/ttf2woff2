@@ -26,5 +26,6 @@ timing = []
 
 [dependencies]
 brotli = { version = "8", features = ["disable-timer"] }
+byteorder = "1"
 thiserror = "2"
 clap = { version = "4", features = ["derive"] }

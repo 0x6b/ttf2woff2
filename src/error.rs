@@ -1,14 +1,27 @@
 use std::{io, num::ParseIntError};
+
 /// Error type for the library
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    /// Failed to parse TTF/OTF font
-    #[error("Failed to parse font: {0}")]
-    ParseError(String),
+    /// Data too short for expected structure
+    #[error("Data too short: {context}")]
+    DataTooShort { context: &'static str },
 
-    /// Failed to encode to WOFF2
-    #[error("Failed to encode: {0}")]
-    EncodeError(String),
+    /// Unsupported font format
+    #[error("Only TrueType fonts (TTF) are supported; OTF/CFF fonts are not supported")]
+    UnsupportedFormat,
+
+    /// Table extends beyond data bounds
+    #[error("Table extends beyond data")]
+    TableOutOfBounds,
+
+    /// Invalid glyph data
+    #[error("Invalid glyph: {0}")]
+    InvalidGlyph(&'static str),
+
+    /// Brotli compression failed
+    #[error("Brotli compression failed: {0}")]
+    Compression(String),
 
     /// Failed to parse integer
     #[error("Failed to parse integer")]

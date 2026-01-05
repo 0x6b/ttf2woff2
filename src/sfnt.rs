@@ -1,7 +1,13 @@
+use std::io::{Cursor, Read};
+
+use byteorder::{BigEndian, ReadBytesExt};
+
+use crate::{Error, tag::Tag};
+
 pub const TTF_FLAVOR: u32 = 0x00010000;
 
 pub struct SfntTable {
-    pub tag: [u8; 4],
+    pub tag: Tag,
     pub offset: u32,
     pub length: u32,
 }
@@ -12,46 +18,46 @@ pub struct Sfnt {
 }
 
 impl Sfnt {
-    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
-        if data.len() < 12 {
-            return Err("Data too short for SFNT header");
-        }
+    pub fn parse(data: &[u8]) -> Result<Self, Error> {
+        let mut cursor = Cursor::new(data);
 
-        let flavor = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
-        let num_tables = u16::from_be_bytes([data[4], data[5]]) as usize;
+        let flavor = cursor
+            .read_u32::<BigEndian>()
+            .map_err(|_| Error::DataTooShort { context: "SFNT header" })?;
+        let num_tables = cursor
+            .read_u16::<BigEndian>()
+            .map_err(|_| Error::DataTooShort { context: "SFNT header" })?
+            as usize;
+
+        // Skip search_range, entry_selector, range_shift (6 bytes)
+        cursor.set_position(12);
 
         if flavor != TTF_FLAVOR {
-            return Err("Only TrueType fonts (TTF) are supported; OTF/CFF fonts are not supported");
-        }
-
-        let required_len = 12 + num_tables * 16;
-        if data.len() < required_len {
-            return Err("Data too short for table directory");
+            return Err(Error::UnsupportedFormat);
         }
 
         let mut tables = Vec::with_capacity(num_tables);
-        for i in 0..num_tables {
-            let offset = 12 + i * 16;
-            let tag = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
-            let table_offset = u32::from_be_bytes([
-                data[offset + 8],
-                data[offset + 9],
-                data[offset + 10],
-                data[offset + 11],
-            ]);
-            let length = u32::from_be_bytes([
-                data[offset + 12],
-                data[offset + 13],
-                data[offset + 14],
-                data[offset + 15],
-            ]);
+        for _ in 0..num_tables {
+            let mut tag_bytes = [0u8; 4];
+            cursor
+                .read_exact(&mut tag_bytes)
+                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+            let _checksum = cursor
+                .read_u32::<BigEndian>()
+                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+            let offset = cursor
+                .read_u32::<BigEndian>()
+                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+            let length = cursor
+                .read_u32::<BigEndian>()
+                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
 
-            let end = table_offset as usize + length as usize;
+            let end = offset as usize + length as usize;
             if end > data.len() {
-                return Err("Table extends beyond data");
+                return Err(Error::TableOutOfBounds);
             }
 
-            tables.push(SfntTable { tag, offset: table_offset, length });
+            tables.push(SfntTable { tag: Tag(tag_bytes), offset, length });
         }
 
         Ok(Self { flavor, tables })

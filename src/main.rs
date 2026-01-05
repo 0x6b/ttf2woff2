@@ -9,9 +9,9 @@ use ttf2woff2::{BrotliQuality, encode};
 
 #[derive(Parser)]
 #[command(name = "ttf2woff2")]
-#[command(about = "Convert TTF/OTF fonts to WOFF2 format")]
+#[command(about = "Convert TTF fonts to WOFF2 format")]
 struct Args {
-    /// Path to the input TTF/OTF file
+    /// Path to the input TTF file
     input: PathBuf,
 
     /// Path to the output WOFF2 file (defaults to input with .woff2 extension)
