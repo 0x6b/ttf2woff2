@@ -40,3 +40,9 @@ impl From<BrotliQuality> for i32 {
         quality.value as i32
     }
 }
+
+impl From<u8> for BrotliQuality {
+    fn from(quality: u8) -> Self {
+        Self { value: quality.min(11) }
+    }
+}
