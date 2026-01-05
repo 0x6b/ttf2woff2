@@ -10,7 +10,6 @@ repository = "https://github.com/0x6b/ttf2woff2"
 readme = "README.md"
 categories = ["text-processing"]
 keywords = ["fonts", "cli", "woff2", "ttf", "font-conversion"]
-rust-version = "1.85.0"
 
 [lib]
 name = "ttf2woff2"
