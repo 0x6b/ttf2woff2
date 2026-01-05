@@ -48,17 +48,10 @@ Tests generate WOFF2 files and validate against fonttools:
 cargo test
 ```
 
-Python scripts are also provided for manual validation:
+Manual validation:
 
 ```bash
-# Test against fonttools (generates fonttools WOFF2 on the fly)
-uv run --with fonttools --with brotli scripts/test_against_fonttools.py font.ttf font.woff2
-
-# Validate metadata and glyph shapes
-uv run --with fonttools --with brotli scripts/validate_woff2.py font.ttf font.woff2
-
-# Compare file sizes with fonttools
-uv run --with fonttools --with brotli scripts/compare_size.py font.ttf font.woff2
+uv run --with fonttools --with brotli scripts/validate.py font.ttf font.woff2
 ```
 
 ## License

@@ -38,7 +38,7 @@ fn test_font(name: &str) {
             "fonttools",
             "--with",
             "brotli",
-            "scripts/test_against_fonttools.py",
+            "scripts/validate.py",
             ttf_path.to_str().unwrap(),
             rust_woff2_path.to_str().unwrap(),
         ])
