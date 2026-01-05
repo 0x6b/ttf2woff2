@@ -10,23 +10,6 @@ use super::{
 };
 use crate::Error;
 
-#[cfg(feature = "timing")]
-macro_rules! time_section {
-    ($name:expr, $block:expr) => {{
-        let start = std::time::Instant::now();
-        let result = $block;
-        eprintln!("[TIMING] {}: {:?}", $name, start.elapsed());
-        result
-    }};
-}
-
-#[cfg(not(feature = "timing"))]
-macro_rules! time_section {
-    ($name:expr, $block:expr) => {
-        $block
-    };
-}
-
 /// Options for WOFF2 encoding
 #[derive(Debug, Clone, Copy)]
 pub struct EncodeOptions {
@@ -76,7 +59,7 @@ impl<'a> TableRefs<'a> {
 
 impl<'a> Encoder<'a> {
     fn new(data: &'a [u8], options: EncodeOptions) -> Result<Self, Error> {
-        let sfnt: Sfnt = time_section!("SFNT parsing", data.try_into()?);
+        let sfnt: Sfnt = data.try_into()?;
         Ok(Self { data, sfnt, options })
     }
 
@@ -113,16 +96,13 @@ impl<'a> Encoder<'a> {
             let head_data = self.table_slice(head);
             let maxp_data = self.table_slice(maxp);
 
-            let transformed = time_section!(
-                "glyf/loca transform",
-                GlyfContext {
-                    glyf: glyf_data,
-                    loca: loca_data,
-                    head: head_data,
-                    maxp: maxp_data
-                }
-                .transform()?
-            );
+            let transformed = GlyfContext {
+                glyf: glyf_data,
+                loca: loca_data,
+                head: head_data,
+                maxp: maxp_data,
+            }
+            .transform()?;
             return Ok(Some(transformed));
         }
 
@@ -203,26 +183,8 @@ impl<'a> Encoder<'a> {
             ..Default::default()
         };
 
-        #[cfg(feature = "timing")]
-        eprintln!(
-            "[TIMING] Uncompressed data size: {} bytes ({:.2} MB)",
-            uncompressed_data.len(),
-            uncompressed_data.len() as f64 / (1024.0 * 1024.0)
-        );
-
-        time_section!(
-            "Brotli compression",
-            BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
-                .map_err(|e| Error::Compression(e.to_string()))?
-        );
-
-        #[cfg(feature = "timing")]
-        eprintln!(
-            "[TIMING] Compressed data size: {} bytes ({:.2} MB), ratio: {:.1}%",
-            compressed_data.len(),
-            compressed_data.len() as f64 / (1024.0 * 1024.0),
-            (compressed_data.len() as f64 / uncompressed_data.len() as f64) * 100.0
-        );
+        BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
+            .map_err(|e| Error::Compression(e.to_string()))?;
 
         Ok(compressed_data)
     }
@@ -273,9 +235,6 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
     type Error = Error;
 
     fn try_from(encoder: Encoder<'_>) -> Result<Self, Self::Error> {
-        #[cfg(feature = "timing")]
-        let total_start = std::time::Instant::now();
-
         let mut sorted_tables: Vec<_> = encoder.sfnt.tables.iter().collect();
         sorted_tables.sort_by_key(|t| t.tag);
 
@@ -300,9 +259,6 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
             major_version,
             minor_version,
         );
-
-        #[cfg(feature = "timing")]
-        eprintln!("[TIMING] Total encode time: {:?}", total_start.elapsed());
 
         Ok(result)
     }
