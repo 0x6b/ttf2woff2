@@ -11,15 +11,13 @@
 //! ```
 
 pub use brotli_quality::BrotliQuality;
-pub use encode::{encode, encode_no_transform};
+pub use codec::{encode, encode_no_transform};
 pub use error::Error;
 
 mod brotli_quality;
-mod directory;
-mod encode;
+mod codec;
 mod encoding;
 mod error;
-mod header;
 mod sfnt;
 mod tag;
 mod transform;

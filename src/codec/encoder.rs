@@ -1,10 +1,9 @@
 use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
+use super::{TableDirectoryEntry, Woff2Header, WOFF2_SIGNATURE};
 use crate::{
     BrotliQuality, Error,
-    directory::TableDirectoryEntry,
     encoding::InlineBytes,
-    header::{WOFF2_SIGNATURE, Woff2Header},
     sfnt::{Sfnt, SfntTable},
     transform::glyf::transform_glyf,
 };
