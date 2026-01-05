@@ -1,8 +1,8 @@
 [package]
 name = "ttf2woff2"
-version = "0.9.3"
+version = "0.10.0"
 edition = "2024"
-description = "A Rust library and CLI for for compressing a TTF font to WOFF2 format."
+description = "A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format."
 authors = ["kaoru <k@warpnine.io>"]
 license = "MIT"
 homepage = "https://github.com/0x6b/ttf2woff2"
@@ -10,7 +10,6 @@ repository = "https://github.com/0x6b/ttf2woff2"
 readme = "README.md"
 categories = ["text-processing"]
 keywords = ["fonts", "cli", "woff2", "ttf", "font-conversion"]
-rust-version = "1.90.0"
 
 [lib]
 name = "ttf2woff2"
@@ -19,35 +18,13 @@ path = "src/lib.rs"
 [[bin]]
 name = "ttf2woff2"
 path = "src/main.rs"
+required-features = ["cli"]
 
+[features]
+default = ["cli"]
+cli = ["dep:clap"]
 [dependencies]
-# Error management
-anyhow = "1.0"
-thiserror = "2.0"
-
-# Easier path manipulation
-camino = { version = "1.1", features = ["serde"] }
-
-# CLI argument parsing
-clap = { version = "4.5", features = ["derive"] }
-
-# C++ support
-cpp = "0.5"
-
-# Logging
-log = "0.4"
-tracing-subscriber = "0.3"
-
-# Async runtime
-tokio = { version = "1.47", features = ["fs", "rt-multi-thread", "macros"] }
-
-# Ser/de
-serde = { version = "1.0", features = ["derive"] }
-
-[build-dependencies]
-cc = "1.2"
-cpp_build = "0.5"
-pkg-config = "0.3"
-
-[dev-dependencies]
-sha2_hasher = { git = "https://github.com/0x6b/sha2_hasher", tag = "v0.2.0" }
+brotli = { version = "8", features = ["disable-timer"] }
+byteorder = "1"
+thiserror = "2"
+clap = { version = "4", features = ["derive"], optional = true }

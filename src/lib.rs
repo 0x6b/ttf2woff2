@@ -1,12 +1,17 @@
-//! A Rust library compressing a TTF font to WOFF2 format. The output is compatible with
-//! [google/woff2](https://github.com/google/woff2) (via its [`woff2_compress`](https://github.com/google/woff2/blob/master/src/woff2_compress.cc) command).
+//! A Pure Rust library for compressing TTF fonts to WOFF2 format.
 //!
-//! You may use [Brooooooklyn/woff-build](https://github.com/Brooooooklyn/woff-build) instead, which has a more user-friendly interface. This library is more for my personal use and learning purposes.
-pub use brotli_quality::BrotliQuality;
-pub use converter::Converter;
-pub use error::Error;
+//! ## Example
+//!
+//! ```no_run
+//! use ttf2woff2::{encode, BrotliQuality};
+//!
+//! let ttf_data = std::fs::read("font.ttf").unwrap();
+//! let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+//! std::fs::write("font.woff2", &woff2_data).unwrap();
+//! ```
 
-mod brotli_quality;
-mod converter;
+pub use error::Error;
+pub use woff2::{BrotliQuality, EncodeOptions, encode, encode_no_transform};
+
 mod error;
-mod state;
+mod woff2;
