@@ -2,7 +2,10 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, ReadBytesExt};
 
-use super::{triplet::encode_triplet, varint::encode_255_u_int16};
+use super::{
+    triplet::{EncodedTriplet, TripletInput},
+    varint::encode_255_u_int16,
+};
 use crate::Error;
 
 /// WOFF2 transformed glyf table header (36 bytes)
@@ -102,9 +105,9 @@ impl TransformedGlyf {
         for &(x, y, on_curve) in &glyph.points {
             let dx = x.wrapping_sub(prev_x);
             let dy = y.wrapping_sub(prev_y);
-            let (flag, triplet) = encode_triplet(dx, dy, on_curve);
-            self.flag_stream.push(flag);
-            self.glyph_stream.extend_from_slice(triplet.as_slice());
+            let encoded = EncodedTriplet::from(TripletInput { dx, dy, on_curve });
+            self.flag_stream.push(encoded.flag);
+            self.glyph_stream.extend_from_slice(encoded.data.as_slice());
             prev_x = x;
             prev_y = y;
         }
