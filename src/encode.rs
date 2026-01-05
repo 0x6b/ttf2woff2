@@ -131,10 +131,11 @@ fn encode_with_options(
         uncompressed_data.extend_from_slice(&ttf_data[start..end]);
     }
 
-    let mut compressed_data = Vec::new();
+    let mut compressed_data = Vec::with_capacity(uncompressed_data.len());
     let params = BrotliEncoderParams {
         quality: quality.into(),
         mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
+        size_hint: uncompressed_data.len(),
         ..Default::default()
     };
 
