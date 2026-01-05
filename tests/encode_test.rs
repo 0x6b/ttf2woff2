@@ -65,3 +65,8 @@ fn test_warpnine_sans() {
 fn test_noto_sans_jp() {
     test_font("NotoSansJP-Medium");
 }
+
+#[test]
+fn test_recursive_vf() {
+    test_font("Recursive_VF_1.085");
+}

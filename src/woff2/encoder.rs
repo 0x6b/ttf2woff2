@@ -202,7 +202,10 @@ impl<'a> Encoder<'a> {
             + 16 * self.sfnt.tables.len() as u32
             + sorted_tables.iter().map(|t| (t.length + 3) & !3).sum::<u32>();
 
-        let total_length = 48 + directory_size as u32 + compressed_data.len() as u32;
+        let unpadded_length = 48 + directory_size as u32 + compressed_data.len() as u32;
+        // WOFF2 file must be padded to 4-byte boundary
+        let total_length = (unpadded_length + 3) & !3;
+        let padding = (total_length - unpadded_length) as usize;
 
         let header = Woff2Header {
             signature: WOFF2_SIGNATURE,
@@ -227,6 +230,8 @@ impl<'a> Encoder<'a> {
             result.extend_from_slice(entry.as_slice());
         }
         result.extend_from_slice(compressed_data);
+        // Add padding to reach 4-byte alignment
+        result.extend(std::iter::repeat(0u8).take(padding));
         result
     }
 }
