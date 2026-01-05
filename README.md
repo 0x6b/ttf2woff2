@@ -4,9 +4,9 @@ A Pure Rust library and CLI for compressing TTF/OTF fonts to WOFF2 format.
 
 ## Features
 
-- **Pure Rust** - No C/C++ dependencies
-- **glyf/loca transformation** - Achieves compression comparable to Google's woff2
-- **100% glyph fidelity** - All glyph shapes are preserved exactly
+- Pure Rust - No C/C++ dependencies
+- glyf/loca transformation - Achieves compression comparable to Google's woff2
+- 100% glyph fidelity - All glyph shapes are preserved exactly
 - Compatible with [fonttools](https://github.com/fonttools/fonttools) output
 
 ## Installation
@@ -37,23 +37,23 @@ std::fs::write("font.woff2", &woff2_data)?;
 
 Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5.7MB):
 
-| Implementation | Time | Output Size |
-|----------------|------|-------------|
-| **Rust (quality 11)** | 3.0s | 2.32 MB |
-| **Rust (quality 9)** | 0.33s | 2.42 MB |
-| Python fonttools | 9.2s | 2.32 MB |
+| Implementation        | Time  | Output Size |
+| --------------------- | ----- | ----------- |
+| Rust (quality 11) | 3.0s  | 2.32 MB     |
+| Rust (quality 9)  | 0.33s | 2.42 MB     |
+| Python fonttools      | 9.2s  | 2.32 MB     |
 
-- Quality 11 (default): **3x faster** than fonttools
-- Quality 9: **27x faster** than fonttools, with only 4% larger output
+- Quality 11 (default): 3x faster than fonttools
+- Quality 9: 27x faster than fonttools, with only 4% larger output
 
 For faster conversion with minimal size impact, use `-q 9`.
 
 ## Compression Results
 
-| Font | Original TTF | WOFF2 | Compression |
-|------|-------------|-------|-------------|
-| WarpnineSans-Regular | 275 KB | 80 KB | 70.7% |
-| NotoSansJP-Medium | 5.7 MB | 2.3 MB | 59.5% |
+| Font                 | Original TTF | WOFF2  | Compression |
+| -------------------- | ------------ | ------ | ----------- |
+| WarpnineSans-Regular | 275 KB       | 80 KB  | 70.7%       |
+| NotoSansJP-Medium    | 5.7 MB       | 2.3 MB | 59.5%       |
 
 ## Validation
 
