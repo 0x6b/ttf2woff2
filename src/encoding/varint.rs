@@ -1,4 +1,4 @@
-use crate::inline_bytes::InlineBytes;
+use super::InlineBytes;
 
 /// Encoded variable integer - up to 5 bytes for base128, 3 bytes for 255UInt16
 pub type EncodedInt = InlineBytes<5>;

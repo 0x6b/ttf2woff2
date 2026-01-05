@@ -1,4 +1,4 @@
-use crate::inline_bytes::InlineBytes;
+use super::InlineBytes;
 
 /// Triplet encoding result - up to 4 bytes, stored inline to avoid heap allocation
 pub type TripletData = InlineBytes<4>;

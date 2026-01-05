@@ -3,8 +3,8 @@ use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 use crate::{
     BrotliQuality, Error,
     directory::TableDirectoryEntry,
+    encoding::InlineBytes,
     header::{WOFF2_SIGNATURE, Woff2Header},
-    inline_bytes::InlineBytes,
     sfnt::{Sfnt, SfntTable},
     transform::glyf::transform_glyf,
 };

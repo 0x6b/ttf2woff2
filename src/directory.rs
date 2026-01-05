@@ -1,4 +1,4 @@
-use crate::{inline_bytes::InlineBytes, tag::Tag, variable_int::encode_base128};
+use crate::{encoding::{encode_base128, InlineBytes}, tag::Tag};
 
 pub struct TableDirectoryEntry {
     pub tag: Tag,
