@@ -9,4 +9,5 @@ pub use error::Error;
 mod brotli_quality;
 mod converter;
 mod error;
+pub mod pure;
 mod state;

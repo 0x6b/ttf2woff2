@@ -67,9 +67,8 @@ impl Converter<Uninitialized> {
     /// # Arguments
     ///
     /// - `input` - The path to the input TTF file.
-    /// - `output` - The path to the output WOFF2 file. If [`None`], the output file will be
-    ///   created in the same directory as the input file with the same name and the extension
-    ///   `.woff2`.
+    /// - `output` - The path to the output WOFF2 file. If [`None`], the output file will be created
+    ///   in the same directory as the input file with the same name and the extension `.woff2`.
     /// - `quality` - The quality of the Brotli compression algorithm.
     pub async fn from_file<P>(
         input: P,
