@@ -78,9 +78,9 @@ uv run --with fonttools --with brotli scripts/validate.py font.ttf font.woff2
 
 ## License
 
-- The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font in [tests/](tests) is licensed under [OFL](OFL.txt).
-- The [Recursive](https://github.com/arrowtype/recursive) font in [tests/](tests) is licensed under [OFL](OFL.txt).
-- The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/](tests) is licensed under [OFL](OFL.txt).
+- The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font in [tests/](tests) is licensed under [OFL](https://fonts.google.com/noto/specimen/Noto+Sans+JP/license).
+- The [Recursive](https://github.com/arrowtype/recursive) font in [tests/](tests) is licensed under [OFL](https://github.com/arrowtype/recursive/blob/main/OFL.txt).
+- The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/](tests) is licensed under [OFL](https://github.com/0x6b/warpnine-fonts/blob/main/OFL).
 - Everything else is [MIT](LICENSE).
 
 ## References
