@@ -2,7 +2,8 @@ use std::io::{Cursor, Read};
 
 use byteorder::{BigEndian, ReadBytesExt};
 
-use crate::{Error, tag::Tag};
+use super::tag::Tag;
+use crate::Error;
 
 pub const TTF_FLAVOR: u32 = 0x00010000;
 

@@ -1,4 +1,4 @@
-use super::InlineBytes;
+use super::inline_bytes::InlineBytes;
 
 /// Encoded variable integer - up to 5 bytes for base128, 3 bytes for 255UInt16
 pub type EncodedInt = InlineBytes<5>;

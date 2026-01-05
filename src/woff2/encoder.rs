@@ -1,12 +1,12 @@
 use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
-use super::{TableDirectoryEntry, WOFF2_SIGNATURE, Woff2Header};
-use crate::{
-    BrotliQuality, Error,
-    encoding::InlineBytes,
-    sfnt::{Sfnt, SfntTable},
-    transform::glyf::transform_glyf,
-};
+use super::brotli_quality::BrotliQuality;
+use super::directory::TableDirectoryEntry;
+use super::header::{Woff2Header, WOFF2_SIGNATURE};
+use super::inline_bytes::InlineBytes;
+use super::sfnt::{Sfnt, SfntTable};
+use super::transform::transform_glyf;
+use crate::Error;
 
 #[cfg(feature = "timing")]
 macro_rules! time_section {

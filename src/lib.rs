@@ -10,14 +10,8 @@
 //! std::fs::write("font.woff2", &woff2_data).unwrap();
 //! ```
 
-pub use brotli_quality::BrotliQuality;
-pub use codec::{EncodeOptions, encode, encode_no_transform};
 pub use error::Error;
+pub use woff2::{encode, encode_no_transform, BrotliQuality, EncodeOptions};
 
-mod brotli_quality;
-mod codec;
-mod encoding;
 mod error;
-mod sfnt;
-mod tag;
-mod transform;
+mod woff2;
