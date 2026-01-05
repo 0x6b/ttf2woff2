@@ -9,6 +9,23 @@ use crate::{
     transform::glyf::transform_glyf,
 };
 
+#[cfg(feature = "timing")]
+macro_rules! time_section {
+    ($name:expr, $block:expr) => {{
+        let start = std::time::Instant::now();
+        let result = $block;
+        eprintln!("[TIMING] {}: {:?}", $name, start.elapsed());
+        result
+    }};
+}
+
+#[cfg(not(feature = "timing"))]
+macro_rules! time_section {
+    ($name:expr, $block:expr) => {
+        $block
+    };
+}
+
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, String> {
     encode_with_options(ttf_data, quality, true)
 }
@@ -22,7 +39,10 @@ fn encode_with_options(
     quality: BrotliQuality,
     transform_glyf_loca: bool,
 ) -> Result<Vec<u8>, String> {
-    let sfnt = Sfnt::parse(ttf_data).map_err(|e| e.to_string())?;
+    #[cfg(feature = "timing")]
+    let total_start = std::time::Instant::now();
+
+    let sfnt = time_section!("SFNT parsing", Sfnt::parse(ttf_data).map_err(|e| e.to_string())?);
 
     let mut sorted_tables: Vec<_> = sfnt.tables.iter().collect();
     sorted_tables.sort_by_key(|t| t.tag);
@@ -52,7 +72,10 @@ fn encode_with_options(
             let head_data = &ttf_data[head.offset as usize..(head.offset + head.length) as usize];
             let maxp_data = &ttf_data[maxp.offset as usize..(maxp.offset + maxp.length) as usize];
 
-            transformed_glyf = Some(transform_glyf(glyf_data, loca_data, head_data, maxp_data)?);
+            transformed_glyf = time_section!(
+                "glyf/loca transform",
+                Some(transform_glyf(glyf_data, loca_data, head_data, maxp_data)?)
+            );
         }
     }
 
@@ -114,8 +137,27 @@ fn encode_with_options(
         mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
         ..Default::default()
     };
-    BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
-        .map_err(|e| format!("Brotli compression failed: {e}"))?;
+
+    #[cfg(feature = "timing")]
+    eprintln!(
+        "[TIMING] Uncompressed data size: {} bytes ({:.2} MB)",
+        uncompressed_data.len(),
+        uncompressed_data.len() as f64 / (1024.0 * 1024.0)
+    );
+
+    time_section!(
+        "Brotli compression",
+        BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
+            .map_err(|e| format!("Brotli compression failed: {e}"))?
+    );
+
+    #[cfg(feature = "timing")]
+    eprintln!(
+        "[TIMING] Compressed data size: {} bytes ({:.2} MB), ratio: {:.1}%",
+        compressed_data.len(),
+        compressed_data.len() as f64 / (1024.0 * 1024.0),
+        (compressed_data.len() as f64 / uncompressed_data.len() as f64) * 100.0
+    );
 
     let total_sfnt_size = 12
         + 16 * sfnt.tables.len() as u32
@@ -149,6 +191,9 @@ fn encode_with_options(
     result.extend_from_slice(&header.to_bytes());
     result.extend(&directory_bytes);
     result.extend(&compressed_data);
+
+    #[cfg(feature = "timing")]
+    eprintln!("[TIMING] Total encode time: {:?}", total_start.elapsed());
 
     Ok(result)
 }

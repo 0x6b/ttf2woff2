@@ -1,6 +1,9 @@
 use super::triplet::encode_triplet;
 use crate::variable_int::encode_255_u_int16;
 
+#[cfg(feature = "timing")]
+use std::time::Instant;
+
 /// WOFF2 transformed glyf table header (36 bytes)
 pub struct TransformedGlyfHeader {
     pub version: u16,      // 0x0000
@@ -335,15 +338,33 @@ pub fn transform_glyf(
     let offsets = get_glyph_offsets(loca_data, index_format, num_glyphs);
     let mut streams = TransformedGlyf::new(num_glyphs);
 
+    #[cfg(feature = "timing")]
+    let glyph_start = Instant::now();
+
+    #[cfg(feature = "timing")]
+    let mut simple_count = 0u32;
+    #[cfg(feature = "timing")]
+    let mut composite_count = 0u32;
+    #[cfg(feature = "timing")]
+    let mut empty_count = 0u32;
+
     for (glyph_id, &(start, end)) in offsets.iter().enumerate() {
         if start == end {
             streams.n_contour_stream.extend_from_slice(&0i16.to_be_bytes());
+            #[cfg(feature = "timing")]
+            {
+                empty_count += 1;
+            }
             continue;
         }
 
         let glyph_data = &glyf_data[start as usize..end as usize];
         if glyph_data.len() < 2 {
             streams.n_contour_stream.extend_from_slice(&0i16.to_be_bytes());
+            #[cfg(feature = "timing")]
+            {
+                empty_count += 1;
+            }
             continue;
         }
 
@@ -352,10 +373,28 @@ pub fn transform_glyf(
         if num_contours >= 0 {
             let glyph = parse_simple_glyph(glyph_data, num_contours)?;
             encode_simple_glyph(&glyph, glyph_id as u16, &mut streams);
+            #[cfg(feature = "timing")]
+            {
+                simple_count += 1;
+            }
         } else {
             encode_composite_glyph(glyph_data, glyph_id as u16, &mut streams);
+            #[cfg(feature = "timing")]
+            {
+                composite_count += 1;
+            }
         }
     }
+
+    #[cfg(feature = "timing")]
+    eprintln!(
+        "[TIMING] Glyph processing: {:?} ({} glyphs: {} simple, {} composite, {} empty)",
+        glyph_start.elapsed(),
+        num_glyphs,
+        simple_count,
+        composite_count,
+        empty_count
+    );
 
     let header = TransformedGlyfHeader {
         version: 0,
