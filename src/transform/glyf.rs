@@ -73,6 +73,14 @@ impl TransformedGlyf {
         }
     }
 
+    fn push_bbox(&mut self, glyph_id: u16, x_min: i16, y_min: i16, x_max: i16, y_max: i16) {
+        self.set_bbox_bit(glyph_id);
+        self.bbox_stream.extend_from_slice(&x_min.to_be_bytes());
+        self.bbox_stream.extend_from_slice(&y_min.to_be_bytes());
+        self.bbox_stream.extend_from_slice(&x_max.to_be_bytes());
+        self.bbox_stream.extend_from_slice(&y_max.to_be_bytes());
+    }
+
     fn push_empty(&mut self) {
         self.n_contour_stream.extend_from_slice(&0i16.to_be_bytes());
     }
@@ -112,11 +120,7 @@ impl TransformedGlyf {
             && glyph.y_max == calc_y_max;
 
         if !bbox_matches {
-            self.set_bbox_bit(glyph_id);
-            self.bbox_stream.extend_from_slice(&glyph.x_min.to_be_bytes());
-            self.bbox_stream.extend_from_slice(&glyph.y_min.to_be_bytes());
-            self.bbox_stream.extend_from_slice(&glyph.x_max.to_be_bytes());
-            self.bbox_stream.extend_from_slice(&glyph.y_max.to_be_bytes());
+            self.push_bbox(glyph_id, glyph.x_min, glyph.y_min, glyph.x_max, glyph.y_max);
         }
     }
 
@@ -130,11 +134,7 @@ impl TransformedGlyf {
         self.n_contour_stream.extend_from_slice(&num_contours.to_be_bytes());
         self.composite_stream.extend_from_slice(&data[10..]);
 
-        self.set_bbox_bit(glyph_id);
-        self.bbox_stream.extend_from_slice(&x_min.to_be_bytes());
-        self.bbox_stream.extend_from_slice(&y_min.to_be_bytes());
-        self.bbox_stream.extend_from_slice(&x_max.to_be_bytes());
-        self.bbox_stream.extend_from_slice(&y_max.to_be_bytes());
+        self.push_bbox(glyph_id, x_min, y_min, x_max, y_max);
     }
 
     fn finish(self, index_format: u16) -> Vec<u8> {

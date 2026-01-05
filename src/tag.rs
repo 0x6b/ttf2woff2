@@ -12,24 +12,33 @@ const KNOWN_TAGS: [[u8; 4]; 63] = [
 ];
 
 impl Tag {
+    pub const GLYF: Self = Self(*b"glyf");
+    pub const LOCA: Self = Self(*b"loca");
+    pub const HEAD: Self = Self(*b"head");
+    pub const MAXP: Self = Self(*b"maxp");
+
     pub fn known_index(&self) -> Option<u8> {
         KNOWN_TAGS.iter().position(|t| t == &self.0).map(|i| i as u8)
     }
 
+    #[inline]
     pub fn is_glyf(&self) -> bool {
-        self.0 == *b"glyf"
+        *self == Self::GLYF
     }
 
+    #[inline]
     pub fn is_loca(&self) -> bool {
-        self.0 == *b"loca"
+        *self == Self::LOCA
     }
 
+    #[inline]
     pub fn is_head(&self) -> bool {
-        self.0 == *b"head"
+        *self == Self::HEAD
     }
 
+    #[inline]
     pub fn is_maxp(&self) -> bool {
-        self.0 == *b"maxp"
+        *self == Self::MAXP
     }
 
     pub fn to_flags(self, transform_version: u8) -> u8 {
