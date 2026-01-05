@@ -4,6 +4,7 @@ pub struct TableDirectoryEntry {
     pub tag: [u8; 4],
     pub orig_length: u32,
     pub transform_version: u8,
+    pub transform_length: Option<u32>,
 }
 
 impl TableDirectoryEntry {
@@ -24,8 +25,11 @@ impl TableDirectoryEntry {
         result.extend(encode_base128(self.orig_length));
 
         let is_glyf_or_loca = tag_index == Some(10) || tag_index == Some(11);
-        if is_glyf_or_loca && self.transform_version == 0 {
-            result.extend(encode_base128(self.orig_length));
+        if is_glyf_or_loca
+            && self.transform_version == 0
+            && let Some(tlen) = self.transform_length
+        {
+            result.extend(encode_base128(tlen));
         }
 
         result
@@ -44,6 +48,7 @@ pub fn build_directory(tables: &[(&[u8; 4], u32)]) -> Vec<TableDirectoryEntry> {
                 tag: **tag,
                 orig_length: *length,
                 transform_version,
+                transform_length: None,
             }
         })
         .collect()
