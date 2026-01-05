@@ -25,16 +25,32 @@ macro_rules! time_section {
     };
 }
 
+/// Options for WOFF2 encoding
+#[derive(Debug, Clone, Copy)]
+pub struct EncodeOptions {
+    pub quality: BrotliQuality,
+    pub transform_glyf_loca: bool,
+}
+
+impl Default for EncodeOptions {
+    fn default() -> Self {
+        Self {
+            quality: BrotliQuality::default(),
+            transform_glyf_loca: true,
+        }
+    }
+}
+
 struct Encoder<'a> {
     data: &'a [u8],
     sfnt: Sfnt,
-    quality: BrotliQuality,
+    options: EncodeOptions,
 }
 
 impl<'a> Encoder<'a> {
-    fn new(data: &'a [u8], quality: BrotliQuality) -> Result<Self, Error> {
+    fn new(data: &'a [u8], options: EncodeOptions) -> Result<Self, Error> {
         let sfnt = time_section!("SFNT parsing", Sfnt::parse(data)?);
-        Ok(Self { data, sfnt, quality })
+        Ok(Self { data, sfnt, options })
     }
 
     fn table_slice(&self, table: &SfntTable) -> &'a [u8] {
@@ -43,7 +59,7 @@ impl<'a> Encoder<'a> {
         &self.data[start..end]
     }
 
-    fn encode(self, transform_glyf_loca: bool) -> Result<Vec<u8>, Error> {
+    fn encode(self) -> Result<Vec<u8>, Error> {
         #[cfg(feature = "timing")]
         let total_start = std::time::Instant::now();
 
@@ -52,7 +68,7 @@ impl<'a> Encoder<'a> {
 
         let (major_version, minor_version) = self.extract_version(&sorted_tables);
         let transformed_glyf =
-            self.transform_glyf_if_needed(&sorted_tables, transform_glyf_loca)?;
+            self.transform_glyf_if_needed(&sorted_tables, self.options.transform_glyf_loca)?;
         let transformed_glyf_len = transformed_glyf.as_ref().map(|v| v.len() as u32);
 
         let directory_entries = self.build_directory_entries(&sorted_tables, transformed_glyf_len);
@@ -216,7 +232,7 @@ impl<'a> Encoder<'a> {
     fn compress(&self, uncompressed_data: &[u8]) -> Result<Vec<u8>, Error> {
         let mut compressed_data = Vec::with_capacity(uncompressed_data.len());
         let params = BrotliEncoderParams {
-            quality: self.quality.into(),
+            quality: self.options.quality.into(),
             mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
             size_hint: uncompressed_data.len(),
             ..Default::default()
@@ -289,9 +305,11 @@ impl<'a> Encoder<'a> {
 }
 
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
-    Encoder::new(ttf_data, quality)?.encode(true)
+    let options = EncodeOptions { quality, transform_glyf_loca: true };
+    Encoder::new(ttf_data, options)?.encode()
 }
 
 pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
-    Encoder::new(ttf_data, quality)?.encode(false)
+    let options = EncodeOptions { quality, transform_glyf_loca: false };
+    Encoder::new(ttf_data, options)?.encode()
 }

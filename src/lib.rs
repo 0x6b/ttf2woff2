@@ -11,7 +11,7 @@
 //! ```
 
 pub use brotli_quality::BrotliQuality;
-pub use codec::{encode, encode_no_transform};
+pub use codec::{EncodeOptions, encode, encode_no_transform};
 pub use error::Error;
 
 mod brotli_quality;
