@@ -9,18 +9,13 @@ A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
 - 100% glyph fidelity - All glyph shapes are preserved exactly
 - Compatible with [fonttools](https://github.com/fonttools/fonttools) output
 
-## Installation
-
-```bash
-cargo install --git https://github.com/0x6b/ttf2woff2
-```
-
 ## CLI Usage
 
-```bash
-ttf2woff2 font.ttf                     # Output: font.woff2
-ttf2woff2 font.ttf -o output.woff2     # Custom output path
-ttf2woff2 font.ttf -q 5                # Lower quality (faster, larger)
+```console
+$ cargo install ttf2woff2
+$ ttf2woff2 font.ttf                     # Output: font.woff2
+$ ttf2woff2 font.ttf -o output.woff2     # Custom output path
+$ ttf2woff2 font.ttf -q 5                # Lower quality (faster, larger)
 ```
 
 ## Library Usage
@@ -42,25 +37,20 @@ std::fs::write("font.woff2", &woff2_data)?;
 
 ## Performance
 
-Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5.7MB) on Apple M4 Pro:
+Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5,729,332 bytes) on Apple M4 Pro:
 
-| Implementation    | Time  | Output Size |
-| ----------------- | ----- | ----------- |
-| Rust (quality 11) | 3.1s  | 2.32 MB     |
-| Rust (quality 9)  | 0.35s | 2.42 MB     |
-| Python fonttools  | 9.4s  | 2.32 MB     |
+```console
+$ hyperfine --warmup 3 --runs 5 \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-ttf2woff2.woff2 -q 11' \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-ttf2woff2.woff2 -q 9' \
+  'uv run --with fonttools --with brotli python -c "from fontTools.ttLib import TTFont; f=TTFont(\"tests/fixtures/NotoSansJP-Medium.ttf\"); f.flavor=\"woff2\"; f.save(\"/tmp/noto-fonttools.woff2\")"'
+```
 
-- Quality 11 (default): 3x faster than fonttools
-- Quality 9: 27x faster than fonttools, ~4% larger output
-
-For faster conversion with minimal size impact, use `-q 9`.
-
-## Compression Results
-
-| Font                 | Original TTF | WOFF2  | Compression |
-| -------------------- | ------------ | ------ | ----------- |
-| WarpnineSans-Regular | 275 KB       | 80 KB  | 70.7%       |
-| NotoSansJP-Medium    | 5.7 MB       | 2.3 MB | 59.5%       |
+| Implementation   | Brotli Quality | Time (s) | Output Size (bytes) |
+| ---------------- | -------------: | -------: | ------------------: |
+| Rust             |             11 |     3.10 |           2,322,432 |
+| Rust             |              9 |     0.33 |           2,424,432 |
+| Python fonttools |             11 |     9.49 |           2,322,836 |
 
 ## Validation
 
@@ -70,17 +60,23 @@ Tests generate WOFF2 files and validate against fonttools:
 cargo test
 ```
 
-Manual validation:
+Manual validation (need [`uv`](https://docs.astral.sh/uv/) installed):
 
 ```bash
-uv run --with fonttools --with brotli scripts/validate.py font.ttf font.woff2
+uv run scripts/validate.py font.ttf font.woff2
+```
+
+Regenerate golden fixtures (pre-generated fonttools output for comparison):
+
+```bash
+uv run scripts/generate_golden.py
 ```
 
 ## License
 
-- The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font in [tests/](tests) is licensed under [OFL](https://fonts.google.com/noto/specimen/Noto+Sans+JP/license).
-- The [Recursive](https://github.com/arrowtype/recursive) font in [tests/](tests) is licensed under [OFL](https://github.com/arrowtype/recursive/blob/main/OFL.txt).
-- The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/](tests) is licensed under [OFL](https://github.com/0x6b/warpnine-fonts/blob/main/OFL).
+- The [Noto Sans Japanese](https://fonts.google.com/noto/specimen/Noto+Sans+JP) font in [tests/fixtures/](tests/fixtures) is licensed under [OFL](https://fonts.google.com/noto/specimen/Noto+Sans+JP/license).
+- The [Recursive](https://github.com/arrowtype/recursive) font in [tests/fixtures/](tests/fixtures) is licensed under [OFL](https://github.com/arrowtype/recursive/blob/main/OFL.txt).
+- The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/fixtures/](tests/fixtures) is licensed under [OFL](https://github.com/0x6b/warpnine-fonts/blob/main/OFL).
 - Everything else is [MIT](LICENSE).
 
 ## References
