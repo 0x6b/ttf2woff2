@@ -20,7 +20,7 @@ $ ttf2woff2 font.ttf -q 5                # Lower quality (faster, larger)
 
 ## Library Usage
 
-Add to your `Cargo.toml`:
+Add to your `Cargo.toml` with `default-features = false` to exclude the CLI.
 
 ```toml
 [dependencies]
@@ -56,20 +56,20 @@ $ hyperfine --warmup 3 --runs 5 \
 
 Tests generate WOFF2 files and validate against fonttools:
 
-```bash
-cargo test
+```console
+$ cargo test
 ```
 
 Manual validation (need [`uv`](https://docs.astral.sh/uv/) installed):
 
-```bash
-uv run scripts/validate.py font.ttf font.woff2
+```console
+$ uv run scripts/validate.py <font.ttf> <font.woff2>
 ```
 
-Regenerate golden fixtures (pre-generated fonttools output for comparison):
+Regenerate pre-generated fonttools output for faster tests:
 
-```bash
-uv run scripts/generate_golden.py
+```console
+$ uv run scripts/generate_golden.py
 ```
 
 ## License
