@@ -79,6 +79,13 @@ uv run scripts/generate_golden.py
 - The [WarpnineSans](https://github.com/0x6b/warpnine-fonts) font in [tests/fixtures/](tests/fixtures) is licensed under [OFL](https://github.com/0x6b/warpnine-fonts/blob/main/OFL).
 - Everything else is [MIT](LICENSE).
 
+## Alternatives
+
+If you need byte-for-byte compatibility with Google's woff2 converter, decompression support, or WOFF1 support, consider these alternatives:
+
+- [woofwoof](https://github.com/bearcove/woofwoof) - Wraps Google's C++ woff2 library with pure Rust brotli. Supports both compression and decompression.
+- [bodoni/woff](https://github.com/bodoni/woff) - Wraps Google's C++ woff2 and C brotli. Supports WOFF1 and WOFF2.
+
 ## References
 
 - [W3C WOFF2 Specification](https://www.w3.org/TR/WOFF2/)
