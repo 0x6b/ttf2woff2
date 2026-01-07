@@ -7,7 +7,7 @@ use std::{
 use ttf2woff2::{BrotliQuality, encode};
 
 fn test_font(name: &str) {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let ttf_path = root.join(format!("{name}.ttf"));
     let rust_woff2_path = root.join(format!("{name}.woff2"));
 
