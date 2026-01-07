@@ -5,7 +5,7 @@ use crate::read_test_font;
 #[test]
 fn test_transform_produces_valid_output() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     assert!(!woff2_data.is_empty());
     assert_eq!(&woff2_data[0..4], b"wOF2");
@@ -15,8 +15,8 @@ fn test_transform_produces_valid_output() {
 fn test_transform_vs_no_transform_size() {
     let ttf_data = read_test_font("NotoSansJP-Medium.ttf");
 
-    let with_transform = encode(&ttf_data, BrotliQuality::default()).unwrap();
-    let without_transform = encode_no_transform(&ttf_data, BrotliQuality::default()).unwrap();
+    let with_transform = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
+    let without_transform = encode_no_transform(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     let savings_percent =
         (1.0 - with_transform.len() as f64 / without_transform.len() as f64) * 100.0;
@@ -35,7 +35,7 @@ fn test_roundtrip_preserves_glyph_count() {
     let orig_num_glyphs =
         u16::from_be_bytes([ttf_data[maxp_offset + 4], ttf_data[maxp_offset + 5]]);
 
-    let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
     assert!(!woff2_data.is_empty());
 
     assert!(orig_num_glyphs > 0);

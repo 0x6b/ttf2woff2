@@ -9,7 +9,7 @@ fn test_head_transform_flag() {
     let head_offset = find_table_offset(&ttf_data, b"head").unwrap();
     let orig_flags = u16::from_be_bytes([ttf_data[head_offset + 16], ttf_data[head_offset + 17]]);
 
-    let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
     assert!(!woff2_data.is_empty());
 
     let bit_11_set = (orig_flags & (1 << 11)) != 0;
@@ -19,7 +19,7 @@ fn test_head_transform_flag() {
 #[test]
 fn test_tables_sorted_alphabetically() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     let num_tables = u16::from_be_bytes([woff2_data[12], woff2_data[13]]) as usize;
     assert!(num_tables > 0);
@@ -28,8 +28,8 @@ fn test_tables_sorted_alphabetically() {
 #[test]
 fn test_encode_with_transform() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_with_transform = encode(&ttf_data, BrotliQuality::default()).unwrap();
-    let woff2_without_transform = encode_no_transform(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_with_transform = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
+    let woff2_without_transform = encode_no_transform(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     assert!(
         woff2_with_transform.len() < woff2_without_transform.len(),
@@ -40,8 +40,8 @@ fn test_encode_with_transform() {
 #[test]
 fn test_no_transforms() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_with = encode(&ttf_data, BrotliQuality::default()).unwrap();
-    let woff2_without = encode_no_transform(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_with = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
+    let woff2_without = encode_no_transform(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     assert_ne!(woff2_with, woff2_without);
     assert_eq!(&woff2_with[0..4], b"wOF2");
@@ -51,7 +51,7 @@ fn test_no_transforms() {
 #[test]
 fn test_version_from_head() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_data = encode(&ttf_data, BrotliQuality::default()).unwrap();
+    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     let _major = u16::from_be_bytes([woff2_data[28], woff2_data[29]]);
     let _minor = u16::from_be_bytes([woff2_data[30], woff2_data[31]]);

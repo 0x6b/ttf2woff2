@@ -15,7 +15,7 @@ fn read_golden_woff2(name: &str) -> Vec<u8> {
 #[test]
 fn test_signature_matches_fonttools() {
     let rust_woff2 =
-        encode(&read_test_font("WarpnineSans-Regular.ttf"), BrotliQuality::default()).unwrap();
+        encode(&read_test_font("WarpnineSans-Regular.ttf"), BrotliQuality::from(9)).unwrap();
     let golden_woff2 = read_golden_woff2("WarpnineSans-Regular");
 
     assert_eq!(&rust_woff2[0..4], &golden_woff2[0..4], "WOFF2 signature mismatch");
@@ -84,7 +84,7 @@ fn test_size_within_tolerance_variable_font() {
 #[test]
 fn test_num_tables_matches() {
     let rust_woff2 =
-        encode(&read_test_font("WarpnineSans-Regular.ttf"), BrotliQuality::default()).unwrap();
+        encode(&read_test_font("WarpnineSans-Regular.ttf"), BrotliQuality::from(9)).unwrap();
     let golden_woff2 = read_golden_woff2("WarpnineSans-Regular");
 
     let rust_num_tables = u16::from_be_bytes([rust_woff2[12], rust_woff2[13]]);
