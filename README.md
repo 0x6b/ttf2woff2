@@ -86,6 +86,10 @@ If you need byte-for-byte compatibility with Google's woff2 converter, decompres
 - [woofwoof](https://github.com/bearcove/woofwoof) - Wraps Google's C++ woff2 library with pure Rust brotli. Supports both compression and decompression.
 - [bodoni/woff](https://github.com/bodoni/woff) - Wraps Google's C++ woff2 and C brotli. Supports WOFF1 and WOFF2.
 
+## Acknowledgments
+
+This project started as an FFI wrapper around Google's [woff2](https://github.com/google/woff2) and [brotli](https://github.com/google/brotli) C/C++ libraries, then evolved into a pure Rust implementation ([v0.10.0](https://github.com/0x6b/ttf2woff2/tree/v0.10.0)) with assistance from AI coding assistants ([Claude Code](https://www.anthropic.com/claude-code), [Codex](https://openai.com/index/codex/), and [Amp](https://ampcode.com/)). While the code has been tested and validated against [fonttools](https://github.com/fonttools/fonttools), users should verify output for production use.
+
 ## References
 
 - [W3C WOFF2 Specification](https://www.w3.org/TR/WOFF2/)
