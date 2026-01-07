@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = ["fonttools", "brotli"]
+# ///
 """
 Validate WOFF2 files against original TTF and fonttools.
 
 Usage:
-    uv run --with fonttools --with brotli scripts/validate.py <ttf_file> <woff2_file>
+    uv run scripts/validate.py <ttf_file> <woff2_file>
 """
 
 import os

@@ -1,2 +1,3 @@
 /target
 *.woff2
+!tests/fixtures/golden/*.woff2

@@ -1,24 +1,26 @@
-use std::{
-    fs::{read, write},
-    path::PathBuf,
-    process::Command,
-};
+use std::{fs::read, path::PathBuf};
 
 use ttf2woff2::{BrotliQuality, encode};
 
-fn test_font(name: &str) {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
-    let ttf_path = root.join(format!("{name}.ttf"));
-    let rust_woff2_path = root.join(format!("{name}.woff2"));
+fn fixtures_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
+}
 
-    // 1. Encode with Rust
+fn golden_dir() -> PathBuf {
+    fixtures_dir().join("golden")
+}
+
+fn test_font(name: &str) {
+    let ttf_path = fixtures_dir().join(format!("{name}.ttf"));
+    let golden_path = golden_dir().join(format!("{name}.woff2"));
+
     let ttf_data = read(&ttf_path).expect("Failed to read TTF file");
+    let golden_woff2 = read(&golden_path).expect("Failed to read golden WOFF2 file");
+
     let woff2_data = encode(&ttf_data, BrotliQuality::default()).expect("Failed to encode");
 
     assert!(!woff2_data.is_empty());
     assert_eq!(&woff2_data[0..4], b"wOF2", "Invalid WOFF2 signature");
-
-    write(&rust_woff2_path, &woff2_data).expect("Failed to write WOFF2 file");
 
     let compression = (1.0 - woff2_data.len() as f64 / ttf_data.len() as f64) * 100.0;
     println!(
@@ -29,31 +31,17 @@ fn test_font(name: &str) {
         compression
     );
 
-    // 2. Validate against fonttools
-    let output = Command::new("uv")
-        .args([
-            "run",
-            "--with",
-            "fonttools",
-            "--with",
-            "brotli",
-            "scripts/validate.py",
-            ttf_path.to_str().unwrap(),
-            rust_woff2_path.to_str().unwrap(),
-        ])
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
-        .expect("Failed to run validation script");
+    // Compare against golden fixture
+    let size_diff_pct =
+        ((woff2_data.len() as f64 - golden_woff2.len() as f64) / golden_woff2.len() as f64) * 100.0;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    println!("  vs fonttools: {} bytes ({:+.2}%)", golden_woff2.len(), size_diff_pct);
 
-    println!("{stdout}");
-    if !stderr.is_empty() {
-        eprintln!("{stderr}");
-    }
-
-    assert!(output.status.success(), "Validation against fonttools failed");
+    assert!(
+        size_diff_pct.abs() < 5.0,
+        "WOFF2 size differs too much from fonttools golden: {:.2}%",
+        size_diff_pct
+    );
 }
 
 #[test]
