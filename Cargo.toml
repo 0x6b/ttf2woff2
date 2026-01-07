@@ -1,6 +1,6 @@
 [package]
 name = "ttf2woff2"
-version = "0.10.1"
+version = "0.10.2"
 edition = "2024"
 description = "A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format."
 authors = ["kaoru <k@warpnine.io>"]
