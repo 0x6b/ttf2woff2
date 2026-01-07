@@ -71,8 +71,8 @@ impl TransformedGlyf {
     fn set_bbox_bit(&mut self, glyph_id: u16) {
         let idx = glyph_id as usize >> 3;
         let bit = 0x80 >> (glyph_id & 7);
-        if idx < self.bbox_bitmap.len() {
-            self.bbox_bitmap[idx] |= bit;
+        if let Some(byte) = self.bbox_bitmap.get_mut(idx) {
+            *byte |= bit;
         }
     }
 
