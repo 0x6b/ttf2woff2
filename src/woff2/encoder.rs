@@ -1,3 +1,5 @@
+use std::iter::repeat_n;
+
 use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
 use super::{
@@ -231,7 +233,7 @@ impl<'a> Encoder<'a> {
         }
         result.extend_from_slice(compressed_data);
         // Add padding to reach 4-byte alignment
-        result.extend(std::iter::repeat(0u8).take(padding));
+        result.extend(repeat_n(0u8, padding));
         result
     }
 }
@@ -244,14 +246,13 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
         sorted_tables.sort_by_key(|t| t.tag);
 
         // WOFF2 spec requires loca to immediately follow glyf in the table directory
-        if let Some(glyf_pos) = sorted_tables.iter().position(|t| t.tag.is_glyf()) {
-            if let Some(loca_pos) = sorted_tables.iter().position(|t| t.tag.is_loca()) {
-                if loca_pos != glyf_pos + 1 {
-                    let loca = sorted_tables.remove(loca_pos);
-                    let new_glyf_pos = sorted_tables.iter().position(|t| t.tag.is_glyf()).unwrap();
-                    sorted_tables.insert(new_glyf_pos + 1, loca);
-                }
-            }
+        if let Some(glyf_pos) = sorted_tables.iter().position(|t| t.tag.is_glyf())
+            && let Some(loca_pos) = sorted_tables.iter().position(|t| t.tag.is_loca())
+            && loca_pos != glyf_pos + 1
+        {
+            let loca = sorted_tables.remove(loca_pos);
+            let new_glyf_pos = sorted_tables.iter().position(|t| t.tag.is_glyf()).unwrap();
+            sorted_tables.insert(new_glyf_pos + 1, loca);
         }
 
         let table_refs = TableRefs::from_sorted(&sorted_tables);
