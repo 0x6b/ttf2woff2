@@ -71,8 +71,8 @@ impl TransformedGlyf {
     fn set_bbox_bit(&mut self, glyph_id: u16) {
         let idx = glyph_id as usize >> 3;
         let bit = 0x80 >> (glyph_id & 7);
-        if idx < self.bbox_bitmap.len() {
-            self.bbox_bitmap[idx] |= bit;
+        if let Some(byte) = self.bbox_bitmap.get_mut(idx) {
+            *byte |= bit;
         }
     }
 
@@ -269,13 +269,22 @@ impl SimpleGlyph {
     }
 
     fn compute_bbox(&self) -> (i16, i16, i16, i16) {
-        if self.points.is_empty() {
+        let Some(&(first_x, first_y, _)) = self.points.first() else {
             return (0, 0, 0, 0);
+        };
+
+        let mut x_min = first_x;
+        let mut y_min = first_y;
+        let mut x_max = first_x;
+        let mut y_max = first_y;
+
+        for &(x, y, _) in &self.points[1..] {
+            x_min = x_min.min(x);
+            y_min = y_min.min(y);
+            x_max = x_max.max(x);
+            y_max = y_max.max(y);
         }
-        let x_min = self.points.iter().map(|(x, _, _)| *x).min().unwrap_or(0);
-        let y_min = self.points.iter().map(|(_, y, _)| *y).min().unwrap_or(0);
-        let x_max = self.points.iter().map(|(x, _, _)| *x).max().unwrap_or(0);
-        let y_max = self.points.iter().map(|(_, y, _)| *y).max().unwrap_or(0);
+
         (x_min, y_min, x_max, y_max)
     }
 }
@@ -350,53 +359,6 @@ impl TryFrom<(&[u8], i16)> for SimpleGlyph {
     }
 }
 
-struct GlyphOffsetIter<'a> {
-    cursor: Cursor<&'a [u8]>,
-    index_format: i16,
-    remaining: u16,
-}
-
-impl<'a> GlyphOffsetIter<'a> {
-    fn new(loca_data: &'a [u8], index_format: i16, num_glyphs: u16) -> Self {
-        Self {
-            cursor: Cursor::new(loca_data),
-            index_format,
-            remaining: num_glyphs,
-        }
-    }
-}
-
-impl Iterator for GlyphOffsetIter<'_> {
-    type Item = (u32, u32);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.remaining == 0 {
-            return None;
-        }
-        self.remaining -= 1;
-
-        let (start, end) = if self.index_format == 0 {
-            let s = self.cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
-            let e = self.cursor.read_u16::<BigEndian>().unwrap_or(0) as u32 * 2;
-            self.cursor.set_position(self.cursor.position() - 2);
-            (s, e)
-        } else {
-            let s = self.cursor.read_u32::<BigEndian>().unwrap_or(0);
-            let e = self.cursor.read_u32::<BigEndian>().unwrap_or(0);
-            self.cursor.set_position(self.cursor.position() - 4);
-            (s, e)
-        };
-        Some((start, end))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.remaining as usize;
-        (len, Some(len))
-    }
-}
-
-impl ExactSizeIterator for GlyphOffsetIter<'_> {}
-
 pub(super) struct GlyfContext<'a> {
     pub glyf: &'a [u8],
     pub loca: &'a [u8],
@@ -424,19 +386,53 @@ impl GlyfContext<'_> {
             .read_i16::<BigEndian>()
             .map_err(|_| Error::DataTooShort { context: "head table" })?;
 
-        let mut streams = TransformedGlyf::new(num_glyphs, self.glyf.len());
+        let short_loca = match index_format {
+            0 => true,
+            1 => false,
+            _ => return Err(Error::InvalidGlyph("invalid indexToLocFormat")),
+        };
+        let entry_size = if short_loca { 2 } else { 4 };
+        let expected_len = (num_glyphs as usize + 1) * entry_size;
+        if self.loca.len() < expected_len {
+            return Err(Error::DataTooShort { context: "loca table" });
+        }
 
-        for (glyph_id, (start, end)) in
-            GlyphOffsetIter::new(self.loca, index_format, num_glyphs).enumerate()
-        {
-            if start == end {
+        let mut streams = TransformedGlyf::new(num_glyphs, self.glyf.len());
+        let glyf_len = self.glyf.len();
+
+        let mut read_offset = |index: usize| -> Result<u32, Error> {
+            let offset = index * entry_size;
+            let bytes = self
+                .loca
+                .get(offset..offset + entry_size)
+                .ok_or(Error::DataTooShort { context: "loca table" })?;
+            let raw = if short_loca {
+                u16::from_be_bytes([bytes[0], bytes[1]]) as u32
+            } else {
+                u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+            };
+            Ok(if short_loca { raw * 2 } else { raw })
+        };
+
+        let mut start = read_offset(0)?;
+        for glyph_id in 0..num_glyphs as usize {
+            let end = read_offset(glyph_id + 1)?;
+            let start_usize = start as usize;
+            let end_usize = end as usize;
+            if start_usize > end_usize || end_usize > glyf_len {
+                return Err(Error::InvalidGlyph("loca offsets out of bounds"));
+            }
+
+            if start_usize == end_usize {
                 streams.push_empty();
+                start = end;
                 continue;
             }
 
-            let glyph_data = &self.glyf[start as usize..end as usize];
+            let glyph_data = &self.glyf[start_usize..end_usize];
             if glyph_data.len() < 2 {
                 streams.push_empty();
+                start = end;
                 continue;
             }
 
@@ -448,6 +444,8 @@ impl GlyfContext<'_> {
             } else {
                 streams.encode_composite(glyph_id as u16, glyph_data);
             }
+
+            start = end;
         }
 
         Ok(streams.finish(index_format as u16))

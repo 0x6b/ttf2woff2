@@ -1,15 +1,17 @@
 [package]
 name = "ttf2woff2"
-version = "0.10.1"
+version = "0.10.2"
 edition = "2024"
 description = "A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format."
 authors = ["kaoru <k@warpnine.io>"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 homepage = "https://github.com/0x6b/ttf2woff2"
 repository = "https://github.com/0x6b/ttf2woff2"
+documentation = "https://docs.rs/ttf2woff2"
 readme = "README.md"
 categories = ["text-processing"]
 keywords = ["fonts", "cli", "woff2", "ttf", "font-conversion"]
+exclude = ["tests/fixtures/*.ttf", "tests/fixtures/golden/*.woff2"]
 
 [lib]
 name = "ttf2woff2"
