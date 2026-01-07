@@ -400,7 +400,7 @@ impl GlyfContext<'_> {
         let mut streams = TransformedGlyf::new(num_glyphs, self.glyf.len());
         let glyf_len = self.glyf.len();
 
-        let mut read_offset = |index: usize| -> Result<u32, Error> {
+        let read_offset = |index: usize| -> Result<u32, Error> {
             let offset = index * entry_size;
             let bytes = self
                 .loca
