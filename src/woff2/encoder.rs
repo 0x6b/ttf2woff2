@@ -1,5 +1,3 @@
-use std::iter::repeat_n;
-
 use brotli::enc::{BrotliCompress, BrotliEncoderParams};
 
 use super::{
@@ -154,25 +152,39 @@ impl<'a> Encoder<'a> {
         sorted_tables: &[&SfntTable],
         transformed_glyf: Option<&[u8]>,
     ) -> Vec<u8> {
-        let slices: Vec<&[u8]> = match transformed_glyf {
+        let total_len: usize = match transformed_glyf {
             Some(tglyf) => sorted_tables
                 .iter()
-                .filter_map(|table| {
+                .map(|table| {
                     if table.tag.is_loca() {
-                        None
+                        0
                     } else if table.tag.is_glyf() {
-                        Some(tglyf)
+                        tglyf.len()
                     } else {
-                        Some(self.table_slice(table))
+                        table.length as usize
                     }
                 })
-                .collect(),
-            None => sorted_tables.iter().map(|t| self.table_slice(t)).collect(),
+                .sum(),
+            None => sorted_tables.iter().map(|table| table.length as usize).sum(),
         };
 
-        let total_len: usize = slices.iter().map(|s| s.len()).sum();
         let mut data = Vec::with_capacity(total_len);
-        slices.iter().for_each(|s| data.extend_from_slice(s));
+        if let Some(tglyf) = transformed_glyf {
+            for table in sorted_tables {
+                if table.tag.is_loca() {
+                    continue;
+                }
+                if table.tag.is_glyf() {
+                    data.extend_from_slice(tglyf);
+                } else {
+                    data.extend_from_slice(self.table_slice(table));
+                }
+            }
+        } else {
+            for table in sorted_tables {
+                data.extend_from_slice(self.table_slice(table));
+            }
+        }
         data
     }
 
@@ -200,14 +212,17 @@ impl<'a> Encoder<'a> {
         major_version: u16,
         minor_version: u16,
     ) -> Vec<u8> {
+        fn align4(value: u32) -> u32 {
+            (value + 3) & !3
+        }
+
         let total_sfnt_size = 12
             + 16 * self.sfnt.tables.len() as u32
-            + sorted_tables.iter().map(|t| (t.length + 3) & !3).sum::<u32>();
+            + sorted_tables.iter().map(|t| align4(t.length)).sum::<u32>();
 
         let unpadded_length = 48 + directory_size as u32 + compressed_data.len() as u32;
         // WOFF2 file must be padded to 4-byte boundary
-        let total_length = (unpadded_length + 3) & !3;
-        let padding = (total_length - unpadded_length) as usize;
+        let total_length = align4(unpadded_length);
 
         let header = Woff2Header {
             signature: WOFF2_SIGNATURE,
@@ -233,7 +248,7 @@ impl<'a> Encoder<'a> {
         }
         result.extend_from_slice(compressed_data);
         // Add padding to reach 4-byte alignment
-        result.extend(repeat_n(0u8, padding));
+        result.resize(total_length as usize, 0u8);
         result
     }
 }
