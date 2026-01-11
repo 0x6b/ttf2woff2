@@ -13,9 +13,19 @@ A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
 
 ```console
 $ cargo install ttf2woff2
-$ ttf2woff2 font.ttf                     # Output: font.woff2
-$ ttf2woff2 font.ttf -o output.woff2     # Custom output path
-$ ttf2woff2 font.ttf -q 5                # Lower quality (faster, larger)
+$ ttf2woff2 --help
+A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
+
+Usage: ttf2woff2 [OPTIONS] <INPUT>
+
+Arguments:
+  <INPUT>  Path to the input TTF file
+
+Options:
+  -o, --output <OUTPUT>    Path to the output WOFF2 file (defaults to input with .woff2 extension)
+  -q, --quality <QUALITY>  Brotli compression quality (0-11) [default: 9]
+  -h, --help               Print help
+  -V, --version            Print version
 ```
 
 ## Library Usage
@@ -33,6 +43,23 @@ use ttf2woff2::{encode, BrotliQuality};
 let ttf_data = std::fs::read("font.ttf")?;
 let woff2_data = encode(&ttf_data, BrotliQuality::default())?;
 std::fs::write("font.woff2", &woff2_data)?;
+```
+
+## Node.js / WASM Usage
+
+A WASM build is available on npm as [@0x6b/ttf2woff2-wasm](https://www.npmjs.com/package/@0x6b/ttf2woff2-wasm):
+
+```console
+$ npm install @0x6b/ttf2woff2-wasm
+```
+
+```js
+const ttf2woff2 = require("@0x6b/ttf2woff2-wasm");
+const fs = require("fs");
+
+const ttf = fs.readFileSync("font.ttf");
+const woff2 = ttf2woff2(ttf);
+fs.writeFileSync("font.woff2", woff2);
 ```
 
 ## Performance
