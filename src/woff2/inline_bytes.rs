@@ -1,3 +1,4 @@
+use std::ops::Deref;
 #[derive(Clone, Copy)]
 pub(super) struct InlineBytes<const N: usize> {
     data: [u8; N],
@@ -29,7 +30,7 @@ impl<const N: usize> AsRef<[u8]> for InlineBytes<N> {
     }
 }
 
-impl<const N: usize> std::ops::Deref for InlineBytes<N> {
+impl<const N: usize> Deref for InlineBytes<N> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {

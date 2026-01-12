@@ -119,14 +119,10 @@ impl<'a> Encoder<'a> {
             .map(|t| {
                 let is_glyf = t.tag.is_glyf();
                 let is_loca = t.tag.is_loca();
-                let (transform_version, transform_length) =
-                    match (transformed_glyf_len, is_glyf, is_loca) {
-                        (Some(tglyf_len), true, _) => (0, Some(tglyf_len)),
-                        (Some(_), _, true) => (0, Some(0)),
-                        (Some(_), _, _) => (0, None),
-                        (None, true, _) | (None, _, true) => (3, None),
-                        (None, _, _) => (0, None),
-                    };
+                let (transform_version, transform_length) = match transformed_glyf_len {
+                    Some(len) => (0, is_glyf.then_some(len).or(is_loca.then_some(0))),
+                    None => (if is_glyf || is_loca { 3 } else { 0 }, None),
+                };
 
                 TableDirectoryEntry {
                     tag: t.tag,

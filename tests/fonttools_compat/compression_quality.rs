@@ -20,7 +20,7 @@ fn test_quality_clamps_to_max() {
     let q12 = BrotliQuality::from(12);
     let q255 = BrotliQuality::from(255);
 
-    assert_eq!(q11.value, 11);
-    assert_eq!(q12.value, 11); // clamped
-    assert_eq!(q255.value, 11); // clamped
+    assert_eq!(u8::from(q11), 11);
+    assert_eq!(u8::from(q12), 11); // clamped
+    assert_eq!(u8::from(q255), 11); // clamped
 }
