@@ -25,6 +25,7 @@ required-features = ["cli"]
 [features]
 default = ["cli"]
 cli = ["dep:clap"]
+
 [dependencies]
 brotli = { version = "8", features = ["disable-timer"] }
 byteorder = "1"
