@@ -34,7 +34,7 @@ Add to your `Cargo.toml` with `default-features = false` to exclude the CLI.
 
 ```toml
 [dependencies]
-ttf2woff2 = { version = "0.10", default-features = false }
+ttf2woff2 = { version = "0.11", default-features = false }
 ```
 
 ```rust
