@@ -6,7 +6,7 @@ use super::{
     triplet::{EncodedTriplet, TripletInput},
     varint::encode_255_u_int16,
 };
-use crate::Error;
+use crate::{Error, Error::DataTooShort};
 
 /// WOFF2 transformed glyf table header (36 bytes)
 struct TransformedGlyfHeader {
@@ -369,22 +369,22 @@ pub(super) struct GlyfContext<'a> {
 impl GlyfContext<'_> {
     pub(super) fn transform(&self) -> Result<Vec<u8>, Error> {
         if self.maxp.len() < 6 {
-            return Err(Error::DataTooShort { context: "maxp table" });
+            return Err(DataTooShort { context: "maxp table" });
         }
         let mut cursor = Cursor::new(self.maxp);
         cursor.set_position(4);
         let num_glyphs = cursor
             .read_u16::<BigEndian>()
-            .map_err(|_| Error::DataTooShort { context: "maxp table" })?;
+            .map_err(|_| DataTooShort { context: "maxp table" })?;
 
         if self.head.len() < 52 {
-            return Err(Error::DataTooShort { context: "head table" });
+            return Err(DataTooShort { context: "head table" });
         }
         let mut cursor = Cursor::new(self.head);
         cursor.set_position(50);
         let index_format = cursor
             .read_i16::<BigEndian>()
-            .map_err(|_| Error::DataTooShort { context: "head table" })?;
+            .map_err(|_| DataTooShort { context: "head table" })?;
 
         let short_loca = match index_format {
             0 => true,
@@ -394,7 +394,7 @@ impl GlyfContext<'_> {
         let entry_size = if short_loca { 2 } else { 4 };
         let expected_len = (num_glyphs as usize + 1) * entry_size;
         if self.loca.len() < expected_len {
-            return Err(Error::DataTooShort { context: "loca table" });
+            return Err(DataTooShort { context: "loca table" });
         }
 
         let mut streams = TransformedGlyf::new(num_glyphs, self.glyf.len());
@@ -405,7 +405,7 @@ impl GlyfContext<'_> {
             let bytes = self
                 .loca
                 .get(offset..offset + entry_size)
-                .ok_or(Error::DataTooShort { context: "loca table" })?;
+                .ok_or(DataTooShort { context: "loca table" })?;
             let raw = if short_loca {
                 u16::from_be_bytes([bytes[0], bytes[1]]) as u32
             } else {

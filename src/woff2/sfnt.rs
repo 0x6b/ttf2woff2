@@ -3,7 +3,7 @@ use std::io::{Cursor, Read};
 use byteorder::{BigEndian, ReadBytesExt};
 
 use super::tag::Tag;
-use crate::Error;
+use crate::{Error, Error::DataTooShort};
 
 const TTF_FLAVOR: u32 = 0x00010000;
 
@@ -26,10 +26,10 @@ impl TryFrom<&[u8]> for Sfnt {
 
         let flavor = cursor
             .read_u32::<BigEndian>()
-            .map_err(|_| Error::DataTooShort { context: "SFNT header" })?;
+            .map_err(|_| DataTooShort { context: "SFNT header" })?;
         let num_tables = cursor
             .read_u16::<BigEndian>()
-            .map_err(|_| Error::DataTooShort { context: "SFNT header" })?
+            .map_err(|_| DataTooShort { context: "SFNT header" })?
             as usize;
 
         cursor.set_position(12);
@@ -43,16 +43,16 @@ impl TryFrom<&[u8]> for Sfnt {
             let mut tag_bytes = [0u8; 4];
             cursor
                 .read_exact(&mut tag_bytes)
-                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+                .map_err(|_| DataTooShort { context: "table directory" })?;
             let _checksum = cursor
                 .read_u32::<BigEndian>()
-                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+                .map_err(|_| DataTooShort { context: "table directory" })?;
             let offset = cursor
                 .read_u32::<BigEndian>()
-                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+                .map_err(|_| DataTooShort { context: "table directory" })?;
             let length = cursor
                 .read_u32::<BigEndian>()
-                .map_err(|_| Error::DataTooShort { context: "table directory" })?;
+                .map_err(|_| DataTooShort { context: "table directory" })?;
 
             let end = offset as usize + length as usize;
             if end > data.len() {

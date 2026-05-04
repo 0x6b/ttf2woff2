@@ -10,10 +10,18 @@ use super::{
 };
 use crate::Error;
 
-/// Options for WOFF2 encoding
+/// Options for WOFF2 encoding.
 #[derive(Debug, Clone, Copy)]
 pub struct EncodeOptions {
+    /// Brotli compression quality (0-11). Higher values produce smaller output but take longer.
     pub quality: BrotliQuality,
+    /// Apply the WOFF2 `glyf`/`loca` table transformation.
+    ///
+    /// When enabled, the `glyf` and `loca` tables are restructured per the
+    /// [WOFF2 specification](https://www.w3.org/TR/WOFF2/#glyf_table_format)
+    /// before Brotli compression, which typically reduces output size noticeably.
+    /// The transformation is only applied when all of `glyf`, `loca`, `head`,
+    /// and `maxp` tables are present; otherwise the tables are stored as-is.
     pub transform_glyf_loca: bool,
 }
 
@@ -292,11 +300,32 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
     }
 }
 
+/// Encode a TTF font as WOFF2 with the `glyf`/`loca` transformation enabled.
+///
+/// This is the recommended entry point and produces the smallest output for
+/// TrueType fonts. Only TrueType (TTF) input is supported; OpenType/CFF fonts
+/// return [`Error::UnsupportedFormat`].
+///
+/// `quality` selects the Brotli compression quality (0-11); use
+/// [`BrotliQuality::default`] (11) for smallest output, or a lower value for
+/// faster encoding.
+///
+/// # Errors
+///
+/// Returns an [`Error`] if the input is not a valid TTF font, a table extends
+/// beyond the input bounds, glyph data is malformed, or Brotli compression fails.
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
     let options = EncodeOptions { quality, transform_glyf_loca: true };
     Encoder::new(ttf_data, options)?.try_into()
 }
 
+/// Encode a TTF font as WOFF2 without applying the `glyf`/`loca` transformation.
+///
+/// Tables are stored as-is before Brotli compression. Output is typically larger
+/// than [`encode`], but encoding skips the transformation step. Useful for
+/// debugging or when bit-exact preservation of the original table layout is needed.
+///
+/// See [`encode`] for argument and error semantics.
 pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
     let options = EncodeOptions { quality, transform_glyf_loca: false };
     Encoder::new(ttf_data, options)?.try_into()

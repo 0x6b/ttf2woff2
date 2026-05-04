@@ -4,7 +4,12 @@ use crate::Error;
 
 /// [Brotli](https://github.com/google/brotli/) compression quality.
 ///
-/// The quality parameter is an integer from 0 to 11. Defaults to 11.
+/// An integer from 0 (fastest, largest output) to 11 (slowest, smallest output).
+/// Values above 11 are clamped to 11. Defaults to 11.
+///
+/// Construct via [`From<u8>`] or [`FromStr`], and convert into the underlying
+/// `u8` or `i32` (as required by the `brotli` crate) via the corresponding
+/// `From` impls.
 #[derive(Debug, Clone, Copy)]
 pub struct BrotliQuality {
     value: u8,
