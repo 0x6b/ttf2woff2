@@ -24,9 +24,20 @@ Arguments:
 Options:
   -o, --output <OUTPUT>    Path to the output WOFF2 file (defaults to input with .woff2 extension)
   -q, --quality <QUALITY>  Brotli compression quality (0-11) [default: 9]
-  -h, --help               Print help
+  -t, --threads <THREADS>  Number of threads for Brotli compression: 1=single-threaded (deterministic), 0=all cores, N=N threads [default: 1]
+  -h, --help               Print help (see more with '--help')
   -V, --version            Print version
 ```
+
+The `--threads` (`-t`) flag accepts:
+
+| Value         | Meaning                                                 |
+| ------------- | ------------------------------------------------------- |
+| `1` (default) | Single-threaded Brotli — fully deterministic output.    |
+| `0`           | Use all cores (`std::thread::available_parallelism()`). |
+| `N` (>= 2)    | Use exactly `N` threads.                                |
+
+Multi-threaded Brotli is much faster on large fonts at quality 10-11 but the output bytes depend on the thread count and total size grows by typically < 0.5 %. Output remains a valid Brotli stream that any spec-compliant WOFF2 decoder accepts.
 
 ## Library Usage
 
@@ -62,22 +73,29 @@ const woff2 = ttf2woff2(ttf);
 fs.writeFileSync("font.woff2", woff2);
 ```
 
+> [!NOTE]
+> Multi-threaded Brotli compression (`EncodeOptions::threads`) is not available on WebAssembly. The option is silently ignored.
+
 ## Performance
 
-Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5,729,332 bytes) on Apple M4 Pro:
+Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5,729,332 bytes) on Apple M4 Pro (12 cores):
 
 ```console
 $ hyperfine --warmup 3 --runs 5 \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-ttf2woff2.woff2 -q 11' \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-ttf2woff2.woff2 -q 9' \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-st.woff2 -q 11 -t 1' \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-mt.woff2 -q 11 -t 0' \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-st.woff2  -q  9 -t 1' \
+  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-mt.woff2  -q  9 -t 0' \
   'uv run --with fonttools --with brotli python -c "from fontTools.ttLib import TTFont; f=TTFont(\"tests/fixtures/NotoSansJP-Medium.ttf\"); f.flavor=\"woff2\"; f.save(\"/tmp/noto-fonttools.woff2\")"'
 ```
 
-| Implementation   | Brotli Quality | Time (s) | Output Size (bytes) |
-| ---------------- | -------------: | -------: | ------------------: |
-| Rust             |             11 |     3.10 |           2,322,432 |
-| Rust             |              9 |     0.33 |           2,424,432 |
-| Python fonttools |             11 |     9.49 |           2,322,836 |
+| Implementation   | Brotli Quality | Threads | Time (s) | Output Size (bytes) |
+| ---------------- | -------------: | ------: | -------: | ------------------: |
+| Rust             |             11 |       1 |    3.251 |           2,322,432 |
+| Rust             |             11 |    auto |    0.957 |           2,327,752 |
+| Rust             |              9 |       1 |    0.354 |           2,424,432 |
+| Rust             |              9 |    auto |    0.143 |           2,434,116 |
+| Python fonttools |             11 |       1 |    9.863 |           2,322,828 |
 
 ## Validation
 

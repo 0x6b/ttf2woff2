@@ -1,4 +1,11 @@
-use brotli::enc::{BrotliCompress, BrotliEncoderParams};
+use std::num::NonZeroUsize;
+
+use brotli::enc::{
+    BrotliCompress, BrotliEncoderParams, StandardAlloc,
+    backward_references::UnionHasher,
+    multithreading::MultiThreadedSpawner,
+    threading::{CompressMultiSlice, SendAlloc},
+};
 
 use super::{
     brotli_quality::BrotliQuality,
@@ -23,6 +30,24 @@ pub struct EncodeOptions {
     /// The transformation is only applied when all of `glyf`, `loca`, `head`,
     /// and `maxp` tables are present; otherwise the tables are stored as-is.
     pub transform_glyf_loca: bool,
+    /// Number of threads to use for the Brotli compression step.
+    ///
+    /// `None` (default) uses the single-threaded encoder, which is fully deterministic.
+    ///
+    /// `Some(n)` with `n >= 2` uses the multi-threaded Brotli encoder, which can
+    /// roughly halve to quarter wall-time on large fonts at quality 10-11 on multi-core
+    /// machines. The cost: output bytes depend on `n` (each thread compresses an
+    /// independent slice with `catable=true`), and total compressed size grows by
+    /// roughly 0.05-0.5 % vs single-threaded. The output remains a single valid
+    /// Brotli stream that any spec-compliant WOFF2 decoder accepts.
+    ///
+    /// Has no effect when `n == 1`.
+    ///
+    /// On `wasm32-*` targets this option is silently ignored and compression
+    /// always runs single-threaded, because `std::thread::spawn` is not
+    /// available on WebAssembly. Setting `Some(n > 1)` from a WASM build is
+    /// safe (no panic) but yields the same output as `None`.
+    pub threads: Option<NonZeroUsize>,
 }
 
 impl Default for EncodeOptions {
@@ -30,6 +55,7 @@ impl Default for EncodeOptions {
         Self {
             quality: BrotliQuality::default(),
             transform_glyf_loca: true,
+            threads: None,
         }
     }
 }
@@ -193,7 +219,6 @@ impl<'a> Encoder<'a> {
     }
 
     fn compress(&self, uncompressed_data: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut compressed_data = Vec::with_capacity(uncompressed_data.len());
         let params = BrotliEncoderParams {
             quality: self.options.quality.into(),
             mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
@@ -201,10 +226,38 @@ impl<'a> Encoder<'a> {
             ..Default::default()
         };
 
-        BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
-            .map_err(|e| Error::Compression(e.to_string()))?;
+        // WASM cannot spawn OS threads (`std::thread::spawn` panics on
+        // `wasm32-unknown-unknown`), so silently force single-threaded there
+        // regardless of the requested thread count.
+        let num_threads = if cfg!(target_family = "wasm") {
+            1
+        } else {
+            self.options.threads.map(NonZeroUsize::get).unwrap_or(1)
+        };
+        if num_threads <= 1 {
+            let mut compressed_data = Vec::with_capacity(uncompressed_data.len());
+            BrotliCompress(&mut &uncompressed_data[..], &mut compressed_data, &params)
+                .map_err(|e| Error::Compression(e.to_string()))?;
+            return Ok(compressed_data);
+        }
 
-        Ok(compressed_data)
+        // Multi-threaded path. Worst-case output bound: input length + per-thread overhead.
+        // (Brotli rarely expands input; the slack covers per-metablock headers.)
+        let mut output = vec![0u8; uncompressed_data.len() + 1024 * num_threads + 1024];
+        let mut allocs: Vec<SendAlloc<_, _, StandardAlloc, _>> = (0..num_threads)
+            .map(|_| SendAlloc::new(StandardAlloc::default(), UnionHasher::Uninit))
+            .collect();
+        let mut spawner = MultiThreadedSpawner::default();
+        let written = CompressMultiSlice(
+            &params,
+            uncompressed_data,
+            &mut output[..],
+            &mut allocs[..],
+            &mut spawner,
+        )
+        .map_err(|e| Error::Compression(format!("{e:?}")))?;
+        output.truncate(written);
+        Ok(output)
     }
 
     fn build_output(
@@ -315,7 +368,18 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
 /// Returns an [`Error`] if the input is not a valid TTF font, a table extends
 /// beyond the input bounds, glyph data is malformed, or Brotli compression fails.
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
-    let options = EncodeOptions { quality, transform_glyf_loca: true };
+    let options = EncodeOptions { quality, ..EncodeOptions::default() };
+    Encoder::new(ttf_data, options)?.try_into()
+}
+
+/// Encode a TTF font as WOFF2 with full control over [`EncodeOptions`].
+///
+/// Use this when you need to override defaults — e.g. to enable multi-threaded
+/// Brotli compression via [`EncodeOptions::threads`], or to disable the
+/// `glyf`/`loca` transformation.
+///
+/// See [`encode`] for argument and error semantics.
+pub fn encode_with_options(ttf_data: &[u8], options: EncodeOptions) -> Result<Vec<u8>, Error> {
     Encoder::new(ttf_data, options)?.try_into()
 }
 
@@ -327,6 +391,10 @@ pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error>
 ///
 /// See [`encode`] for argument and error semantics.
 pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
-    let options = EncodeOptions { quality, transform_glyf_loca: false };
+    let options = EncodeOptions {
+        quality,
+        transform_glyf_loca: false,
+        ..EncodeOptions::default()
+    };
     Encoder::new(ttf_data, options)?.try_into()
 }
