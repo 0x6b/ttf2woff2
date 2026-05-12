@@ -11,7 +11,7 @@
 //! ```
 
 pub use error::Error;
-pub use woff2::{BrotliQuality, EncodeOptions, encode, encode_no_transform};
+pub use woff2::{BrotliQuality, EncodeOptions, encode, encode_no_transform, encode_with_options};
 
 mod error;
 mod woff2;

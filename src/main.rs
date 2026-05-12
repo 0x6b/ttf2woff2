@@ -1,11 +1,13 @@
 use std::{
     fs::{read, write},
+    num::NonZeroUsize,
     path::PathBuf,
     process::ExitCode,
+    thread,
 };
 
 use clap::Parser;
-use ttf2woff2::{BrotliQuality, encode};
+use ttf2woff2::{BrotliQuality, EncodeOptions, encode_with_options};
 
 #[derive(Parser)]
 #[command(about, version)]
@@ -20,6 +22,15 @@ struct Args {
     /// Brotli compression quality (0-11)
     #[arg(short, long, default_value = "9")]
     quality: u8,
+
+    /// Number of threads for Brotli compression: 1=single-threaded (deterministic), 0=all cores, N=N threads.
+    ///
+    /// Multi-threaded Brotli (`-t 0` or `-t >=2`) is much faster on large fonts at
+    /// quality 10-11 but produces output whose bytes depend on the thread count;
+    /// total size grows by typically < 0.5 %. The output is still a valid Brotli
+    /// stream that any spec-compliant WOFF2 decoder accepts.
+    #[arg(short, long, default_value = "1")]
+    threads: usize,
 }
 
 fn main() -> ExitCode {
@@ -27,6 +38,14 @@ fn main() -> ExitCode {
 
     let output = args.output.unwrap_or_else(|| args.input.with_extension("woff2"));
     let quality = BrotliQuality::from(args.quality);
+
+    let threads = match args.threads {
+        0 => thread::available_parallelism().ok(),
+        1 => None,
+        n => NonZeroUsize::new(n),
+    };
+
+    let options = EncodeOptions { quality, threads, ..EncodeOptions::default() };
 
     let ttf_data = match read(&args.input) {
         Ok(data) => data,
@@ -36,7 +55,7 @@ fn main() -> ExitCode {
         }
     };
 
-    let woff2_data = match encode(&ttf_data, quality) {
+    let woff2_data = match encode_with_options(&ttf_data, options) {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Error encoding: {e}");
