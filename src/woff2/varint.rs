@@ -39,9 +39,9 @@ pub(super) fn encode_base128(mut value: u32) -> EncodedInt {
 /// 255UInt16 encoding per WOFF2 spec.
 #[inline]
 pub(super) fn encode_255_u_int16(value: u16) -> EncodedInt {
-    const ONE_MORE_BYTE_CODE1: u8 = 253;
+    const WORD_CODE: u8 = 253;
     const ONE_MORE_BYTE_CODE2: u8 = 254;
-    const WORD_CODE: u8 = 255;
+    const ONE_MORE_BYTE_CODE1: u8 = 255;
 
     if value < 253 {
         InlineBytes::new([value as u8, 0, 0, 0, 0], 1)
@@ -71,11 +71,11 @@ mod tests {
     fn test_encode_255_u_int16() {
         assert_eq!(encode_255_u_int16(0).as_slice(), &[0]);
         assert_eq!(encode_255_u_int16(252).as_slice(), &[252]);
-        assert_eq!(encode_255_u_int16(253).as_slice(), &[253, 0]);
-        assert_eq!(encode_255_u_int16(505).as_slice(), &[253, 252]);
+        assert_eq!(encode_255_u_int16(253).as_slice(), &[255, 0]);
+        assert_eq!(encode_255_u_int16(505).as_slice(), &[255, 252]);
         assert_eq!(encode_255_u_int16(506).as_slice(), &[254, 0]);
         assert_eq!(encode_255_u_int16(761).as_slice(), &[254, 255]);
-        assert_eq!(encode_255_u_int16(762).as_slice(), &[255, 0x02, 0xFA]);
-        assert_eq!(encode_255_u_int16(0xFFFF).as_slice(), &[255, 0xFF, 0xFF]);
+        assert_eq!(encode_255_u_int16(762).as_slice(), &[253, 0x02, 0xFA]);
+        assert_eq!(encode_255_u_int16(0xFFFF).as_slice(), &[253, 0xFF, 0xFF]);
     }
 }
