@@ -127,7 +127,10 @@ impl TransformedGlyf {
         }
     }
 
-    fn encode_composite(&mut self, glyph_id: u16, data: &[u8]) {
+    fn encode_composite(&mut self, glyph_id: u16, data: &[u8]) -> Result<(), Error> {
+        if data.len() < 10 {
+            return Err(Error::InvalidGlyph("composite glyph too short"));
+        }
         let num_contours = i16::from_be_bytes([data[0], data[1]]);
         let x_min = i16::from_be_bytes([data[2], data[3]]);
         let y_min = i16::from_be_bytes([data[4], data[5]]);
@@ -135,9 +138,60 @@ impl TransformedGlyf {
         let y_max = i16::from_be_bytes([data[8], data[9]]);
 
         self.n_contour_stream.extend_from_slice(&num_contours.to_be_bytes());
-        self.composite_stream.extend_from_slice(&data[10..]);
+
+        // Walk component records starting at offset 10.
+        let mut pos = 10usize;
+        let mut have_instructions = false;
+        loop {
+            // Need at least flags(2) + glyphIndex(2).
+            if pos + 4 > data.len() {
+                return Err(Error::InvalidGlyph("composite component truncated"));
+            }
+            let flags = u16::from_be_bytes([data[pos], data[pos + 1]]);
+            let args = if flags & 0x0001 != 0 { 4 } else { 2 }; // ARG_1_AND_2_ARE_WORDS
+            let xform = if flags & 0x0008 != 0 {
+                2 // WE_HAVE_A_SCALE
+            } else if flags & 0x0040 != 0 {
+                4 // WE_HAVE_AN_X_AND_Y_SCALE
+            } else if flags & 0x0080 != 0 {
+                8 // WE_HAVE_A_TWO_BY_TWO
+            } else {
+                0
+            };
+            let rec = 4 + args + xform; // flags(2) + glyphIndex(2) + args + xform
+            if flags & 0x0100 != 0 {
+                have_instructions = true; // WE_HAVE_INSTRUCTIONS
+            }
+            if pos + rec > data.len() {
+                return Err(Error::InvalidGlyph("composite component exceeds bounds"));
+            }
+            pos += rec;
+            if flags & 0x0020 == 0 {
+                break; // no MORE_COMPONENTS
+            }
+        }
+
+        // Component bytes only (no trailing instructionLength/instructions).
+        self.composite_stream.extend_from_slice(&data[10..pos]);
+
+        if have_instructions {
+            if pos + 2 > data.len() {
+                return Err(Error::InvalidGlyph("missing composite instructionLength"));
+            }
+            let instr_len = u16::from_be_bytes([data[pos], data[pos + 1]]);
+            let instr_start = pos + 2;
+            let instr_end = instr_start + instr_len as usize;
+            if instr_end > data.len() {
+                return Err(Error::InvalidGlyph("composite instructions exceed bounds"));
+            }
+            self.glyph_stream
+                .extend_from_slice(encode_255_u_int16(instr_len).as_slice());
+            self.instruction_stream
+                .extend_from_slice(&data[instr_start..instr_end]);
+        }
 
         self.push_bbox(glyph_id, x_min, y_min, x_max, y_max);
+        Ok(())
     }
 
     fn finish(self, index_format: u16) -> Vec<u8> {
@@ -442,7 +496,7 @@ impl GlyfContext<'_> {
                 let glyph: SimpleGlyph = (glyph_data, num_contours).try_into()?;
                 streams.encode_simple(glyph_id as u16, &glyph);
             } else {
-                streams.encode_composite(glyph_id as u16, glyph_data);
+                streams.encode_composite(glyph_id as u16, glyph_data)?;
             }
 
             start = end;
