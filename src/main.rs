@@ -3,7 +3,7 @@ use std::{
     num::NonZeroUsize,
     path::PathBuf,
     process::ExitCode,
-    thread,
+    thread::available_parallelism,
 };
 
 use clap::Parser;
@@ -23,7 +23,8 @@ struct Args {
     #[arg(short, long, default_value = "9")]
     quality: u8,
 
-    /// Number of threads for Brotli compression: 1=single-threaded (deterministic), 0=all cores, N=N threads.
+    /// Number of threads for Brotli compression: 1=single-threaded (deterministic), 0=all cores,
+    /// N=N threads.
     ///
     /// Multi-threaded Brotli (`-t 0` or `-t >=2`) is much faster on large fonts at
     /// quality 10-11 but produces output whose bytes depend on the thread count;
@@ -40,7 +41,7 @@ fn main() -> ExitCode {
     let quality = BrotliQuality::from(args.quality);
 
     let threads = match args.threads {
-        0 => thread::available_parallelism().ok(),
+        0 => available_parallelism().ok(),
         1 => None,
         n => NonZeroUsize::new(n),
     };
