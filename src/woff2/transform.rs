@@ -238,7 +238,7 @@ impl SimpleGlyph {
                 if pos >= data.len() {
                     return Err(Error::InvalidGlyph(err));
                 }
-                let val = data[pos] as i16;
+                let val = i16::from(data[pos]);
                 cursor.set_position((pos + 1) as u64);
                 if same_or_positive { val } else { -val }
             } else if same_or_positive {
@@ -407,7 +407,7 @@ impl GlyfContext<'_> {
                 .get(offset..offset + entry_size)
                 .ok_or(DataTooShort { context: "loca table" })?;
             let raw = if short_loca {
-                u16::from_be_bytes([bytes[0], bytes[1]]) as u32
+                u32::from(u16::from_be_bytes([bytes[0], bytes[1]]))
             } else {
                 u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
             };

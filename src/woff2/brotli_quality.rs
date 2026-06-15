@@ -45,6 +45,6 @@ impl From<BrotliQuality> for u8 {
 
 impl From<BrotliQuality> for i32 {
     fn from(quality: BrotliQuality) -> i32 {
-        quality.value as i32
+        i32::from(quality.value)
     }
 }

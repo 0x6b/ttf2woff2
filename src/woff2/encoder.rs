@@ -2,7 +2,7 @@ use std::num::NonZeroUsize;
 
 use brotli::enc::{
     BrotliCompress, BrotliEncoderParams, StandardAlloc,
-    backward_references::UnionHasher,
+    backward_references::{BrotliEncoderMode, UnionHasher},
     multithreading::MultiThreadedSpawner,
     threading::{CompressMultiSlice, SendAlloc},
 };
@@ -221,7 +221,7 @@ impl<'a> Encoder<'a> {
     fn compress(&self, uncompressed_data: &[u8]) -> Result<Vec<u8>, Error> {
         let params = BrotliEncoderParams {
             quality: self.options.quality.into(),
-            mode: brotli::enc::backward_references::BrotliEncoderMode::BROTLI_MODE_FONT,
+            mode: BrotliEncoderMode::BROTLI_MODE_FONT,
             size_hint: uncompressed_data.len(),
             ..Default::default()
         };
@@ -232,7 +232,7 @@ impl<'a> Encoder<'a> {
         let num_threads = if cfg!(target_family = "wasm") {
             1
         } else {
-            self.options.threads.map(NonZeroUsize::get).unwrap_or(1)
+            self.options.threads.map_or(1, NonZeroUsize::get)
         };
         if num_threads <= 1 {
             let mut compressed_data = Vec::with_capacity(uncompressed_data.len());
