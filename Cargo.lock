@@ -215,7 +215,7 @@ dependencies = [
 
 [[package]]
 name = "ttf2woff2"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "brotli",
  "byteorder",
