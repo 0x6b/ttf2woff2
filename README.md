@@ -5,8 +5,8 @@ A Pure Rust library and CLI for compressing TTF fonts to WOFF2 format.
 ## Features
 
 - Pure Rust - No C/C++ or Python dependencies
-- glyf/loca transformation - Achieves compression comparable to Google's woff2
-- 100% glyph fidelity - All glyph shapes are preserved exactly
+- Optional glyf/loca transformation - Disabled by default for decoder compatibility
+- Preserves original glyf/loca table data when transformation is disabled (the default)
 - Compatible with [fonttools](https://github.com/fonttools/fonttools) output
 
 ## CLI Usage
@@ -56,6 +56,43 @@ let woff2_data = encode(&ttf_data, BrotliQuality::default())?;
 std::fs::write("font.woff2", &woff2_data)?;
 ```
 
+### Optional glyf/loca transformation
+
+The CLI, `encode`, and `EncodeOptions::default()` leave the `glyf`/`loca`
+transformation **disabled**. Tables are stored as-is before Brotli compression.
+This prioritizes decoder compatibility over the smallest possible file size.
+
+To opt in through the Rust API:
+
+```rust
+use ttf2woff2::{encode_with_options, EncodeOptions};
+
+let options = EncodeOptions {
+    transform_glyf_loca: true,
+    ..EncodeOptions::default()
+};
+let woff2_data = encode_with_options(&ttf_data, options)?;
+```
+
+Enabling the transformation can reduce output size, but has a known compatibility
+issue: glyph reconstruction can increase `glyf` beyond the short `loca` offset
+limit without switching to long `loca`. Such output can be rejected by
+Chromium/Google's WOFF2 decoder, even when fontTools can read the WOFF2 directly
+([issue #30](https://github.com/0x6b/ttf2woff2/issues/30)). This is not inherently
+limited to variable fonts. If you opt in, validate the output with your target
+decoders and browsers; a successful encode or fontTools-only check is insufficient.
+
+For Source Sans 3 variable (646,340-byte TTF), at Brotli quality 9:
+
+| Transformation | WOFF2 size | Reduction from TTF | Chromium 155 |
+| -------------- | ---------: | -----------------: | ------------ |
+| Disabled       | 204,076 bytes | 68.43% | Loads |
+| Enabled        | 191,080 bytes | 70.44% | Rejected |
+
+Disabling it costs 12,996 bytes (+6.8% WOFF2 size) in this example. The size
+tradeoff depends on the font. `encode_no_transform` remains available and has
+the same behavior as `encode`.
+
 ## Node.js / WASM Usage
 
 A WASM build is available on npm as [@0x6b/ttf2woff2-wasm](https://www.npmjs.com/package/@0x6b/ttf2woff2-wasm):
@@ -78,16 +115,8 @@ fs.writeFileSync("font.woff2", woff2);
 
 ## Performance
 
-Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5,729,332 bytes) on Apple M4 Pro (12 cores):
-
-```console
-$ hyperfine --warmup 3 --runs 5 \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-st.woff2 -q 11 -t 1' \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q11-mt.woff2 -q 11 -t 0' \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-st.woff2  -q  9 -t 1' \
-  './target/release/ttf2woff2 tests/fixtures/NotoSansJP-Medium.ttf -o /tmp/noto-q9-mt.woff2  -q  9 -t 0' \
-  'uv run --with fonttools --with brotli python -c "from fontTools.ttLib import TTFont; f=TTFont(\"tests/fixtures/NotoSansJP-Medium.ttf\"); f.flavor=\"woff2\"; f.save(\"/tmp/noto-fonttools.woff2\")"'
-```
+Benchmarks on NotoSansJP-Medium (17,808 glyphs, 5,729,332 bytes) on Apple M4 Pro
+(12 cores), with glyf/loca transformation enabled (`transform_glyf_loca: true`):
 
 | Implementation   | Brotli Quality | Threads | Time (s) | Output Size (bytes) |
 | ---------------- | -------------: | ------: | -------: | ------------------: |

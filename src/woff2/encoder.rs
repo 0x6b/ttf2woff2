@@ -18,7 +18,7 @@ use super::{
 use crate::Error;
 
 /// Options for WOFF2 encoding.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct EncodeOptions {
     /// Brotli compression quality (0-11). Higher values produce smaller output but take longer.
     pub quality: BrotliQuality,
@@ -27,6 +27,9 @@ pub struct EncodeOptions {
     /// When enabled, the `glyf` and `loca` tables are restructured per the
     /// [WOFF2 specification](https://www.w3.org/TR/WOFF2/#glyf_table_format)
     /// before Brotli compression, which typically reduces output size noticeably.
+    /// Disabled by default for decoder compatibility. Enabling this can produce
+    /// fonts rejected by Chromium/Google's WOFF2 decoder when reconstructed glyph
+    /// offsets exceed the short `loca` range (see issue #30).
     /// The transformation is only applied when all of `glyf`, `loca`, `head`,
     /// and `maxp` tables are present; otherwise the tables are stored as-is.
     pub transform_glyf_loca: bool,
@@ -48,16 +51,6 @@ pub struct EncodeOptions {
     /// available on WebAssembly. Setting `Some(n > 1)` from a WASM build is
     /// safe (no panic) but yields the same output as `None`.
     pub threads: Option<NonZeroUsize>,
-}
-
-impl Default for EncodeOptions {
-    fn default() -> Self {
-        Self {
-            quality: BrotliQuality::default(),
-            transform_glyf_loca: true,
-            threads: None,
-        }
-    }
 }
 
 struct Encoder<'a> {
@@ -353,10 +346,10 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
     }
 }
 
-/// Encode a TTF font as WOFF2 with the `glyf`/`loca` transformation enabled.
+/// Encode a TTF font as WOFF2 without the `glyf`/`loca` transformation.
 ///
-/// This is the recommended entry point and produces the smallest output for
-/// TrueType fonts. Only TrueType (TTF) input is supported; OpenType/CFF fonts
+/// This is the recommended entry point and preserves the original table layout
+/// for decoder compatibility. Only TrueType (TTF) input is supported; OpenType/CFF fonts
 /// return [`Error::UnsupportedFormat`].
 ///
 /// `quality` selects the Brotli compression quality (0-11); use
@@ -375,7 +368,7 @@ pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error>
 /// Encode a TTF font as WOFF2 with full control over [`EncodeOptions`].
 ///
 /// Use this when you need to override defaults — e.g. to enable multi-threaded
-/// Brotli compression via [`EncodeOptions::threads`], or to disable the
+/// Brotli compression via [`EncodeOptions::threads`], or to opt into the
 /// `glyf`/`loca` transformation.
 ///
 /// See [`encode`] for argument and error semantics.
@@ -385,16 +378,10 @@ pub fn encode_with_options(ttf_data: &[u8], options: EncodeOptions) -> Result<Ve
 
 /// Encode a TTF font as WOFF2 without applying the `glyf`/`loca` transformation.
 ///
-/// Tables are stored as-is before Brotli compression. Output is typically larger
-/// than [`encode`], but encoding skips the transformation step. Useful for
-/// debugging or when bit-exact preservation of the original table layout is needed.
+/// Tables are stored as-is before Brotli compression, preserving the original
+/// table layout. This is also the default behavior of [`encode`].
 ///
 /// See [`encode`] for argument and error semantics.
 pub fn encode_no_transform(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
-    let options = EncodeOptions {
-        quality,
-        transform_glyf_loca: false,
-        ..EncodeOptions::default()
-    };
-    Encoder::new(ttf_data, options)?.try_into()
+    encode(ttf_data, quality)
 }
