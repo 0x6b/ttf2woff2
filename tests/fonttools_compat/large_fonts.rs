@@ -1,11 +1,20 @@
-use ttf2woff2::{BrotliQuality, encode};
+use ttf2woff2::{BrotliQuality, EncodeOptions, encode_with_options};
 
 use crate::read_test_font;
 
 #[test]
 fn test_large_cjk_font() {
     let ttf_data = read_test_font("NotoSansJP-Medium.ttf");
-    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
+    // The compression target below assumes glyf/loca transformation.
+    let woff2_data = encode_with_options(
+        &ttf_data,
+        EncodeOptions {
+            quality: BrotliQuality::from(9),
+            transform_glyf_loca: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     assert!(!woff2_data.is_empty());
     assert_eq!(&woff2_data[0..4], b"wOF2");

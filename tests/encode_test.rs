@@ -1,6 +1,6 @@
 use std::{fs::read, path::PathBuf};
 
-use ttf2woff2::{BrotliQuality, encode};
+use ttf2woff2::{BrotliQuality, EncodeOptions, encode_with_options};
 
 fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
@@ -17,7 +17,16 @@ fn test_font(name: &str) {
     let ttf_data = read(&ttf_path).expect("Failed to read TTF file");
     let golden_woff2 = read(&golden_path).expect("Failed to read golden WOFF2 file");
 
-    let woff2_data = encode(&ttf_data, BrotliQuality::from(9)).expect("Failed to encode");
+    // Compare like-for-like with fontTools' transformed golden output.
+    let woff2_data = encode_with_options(
+        &ttf_data,
+        EncodeOptions {
+            quality: BrotliQuality::from(9),
+            transform_glyf_loca: true,
+            ..Default::default()
+        },
+    )
+    .expect("Failed to encode");
 
     assert!(!woff2_data.is_empty());
     assert_eq!(&woff2_data[0..4], b"wOF2", "Invalid WOFF2 signature");

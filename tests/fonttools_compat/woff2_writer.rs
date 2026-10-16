@@ -1,4 +1,4 @@
-use ttf2woff2::{BrotliQuality, encode, encode_no_transform};
+use ttf2woff2::{BrotliQuality, EncodeOptions, encode, encode_no_transform, encode_with_options};
 
 use crate::read_test_font;
 
@@ -28,7 +28,15 @@ fn test_tables_sorted_alphabetically() {
 #[test]
 fn test_encode_with_transform() {
     let ttf_data = read_test_font("WarpnineSans-Regular.ttf");
-    let woff2_with_transform = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
+    let woff2_with_transform = encode_with_options(
+        &ttf_data,
+        EncodeOptions {
+            quality: BrotliQuality::from(9),
+            transform_glyf_loca: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     let woff2_without_transform = encode_no_transform(&ttf_data, BrotliQuality::from(9)).unwrap();
 
     assert!(
@@ -43,7 +51,18 @@ fn test_no_transforms() {
     let woff2_with = encode(&ttf_data, BrotliQuality::from(9)).unwrap();
     let woff2_without = encode_no_transform(&ttf_data, BrotliQuality::from(9)).unwrap();
 
-    assert_ne!(woff2_with, woff2_without);
+    assert_eq!(woff2_with, woff2_without);
+    assert_eq!(
+        encode_with_options(
+            &ttf_data,
+            EncodeOptions {
+                quality: BrotliQuality::from(9),
+                ..Default::default()
+            },
+        )
+        .unwrap(),
+        woff2_without,
+    );
     assert_eq!(&woff2_with[0..4], b"wOF2");
     assert_eq!(&woff2_without[0..4], b"wOF2");
 }

@@ -1,6 +1,6 @@
 use std::{fs::read, path::PathBuf};
 
-use ttf2woff2::{BrotliQuality, encode};
+use ttf2woff2::{BrotliQuality, EncodeOptions, encode, encode_with_options};
 
 use crate::{read_test_font, test_dir};
 
@@ -23,8 +23,12 @@ fn test_signature_matches_fonttools() {
 
 #[test]
 fn test_size_within_tolerance_warpnine() {
-    let rust_woff2 =
-        encode(&read_test_font("WarpnineSans-Regular.ttf"), BrotliQuality::default()).unwrap();
+    // fontTools' golden files use the glyf/loca transformation.
+    let rust_woff2 = encode_with_options(
+        &read_test_font("WarpnineSans-Regular.ttf"),
+        EncodeOptions { transform_glyf_loca: true, ..Default::default() },
+    )
+    .unwrap();
     let golden_woff2 = read_golden_woff2("WarpnineSans-Regular");
 
     let size_diff_pct =
@@ -43,8 +47,11 @@ fn test_size_within_tolerance_warpnine() {
 
 #[test]
 fn test_size_within_tolerance_noto_cjk() {
-    let rust_woff2 =
-        encode(&read_test_font("NotoSansJP-Medium.ttf"), BrotliQuality::default()).unwrap();
+    let rust_woff2 = encode_with_options(
+        &read_test_font("NotoSansJP-Medium.ttf"),
+        EncodeOptions { transform_glyf_loca: true, ..Default::default() },
+    )
+    .unwrap();
     let golden_woff2 = read_golden_woff2("NotoSansJP-Medium");
 
     let size_diff_pct =
@@ -63,8 +70,11 @@ fn test_size_within_tolerance_noto_cjk() {
 
 #[test]
 fn test_size_within_tolerance_variable_font() {
-    let rust_woff2 =
-        encode(&read_test_font("Recursive_VF_1.085.ttf"), BrotliQuality::default()).unwrap();
+    let rust_woff2 = encode_with_options(
+        &read_test_font("Recursive_VF_1.085.ttf"),
+        EncodeOptions { transform_glyf_loca: true, ..Default::default() },
+    )
+    .unwrap();
     let golden_woff2 = read_golden_woff2("Recursive_VF_1.085");
 
     let size_diff_pct =
