@@ -12,7 +12,7 @@ use ttf2woff2::{BrotliQuality, EncodeOptions, encode_with_options};
 #[derive(Parser)]
 #[command(about, version)]
 struct Args {
-    /// Path to the input TTF file
+    /// Path to the input TTF or OTF file
     input: PathBuf,
 
     /// Path to the output WOFF2 file (defaults to input with .woff2 extension)

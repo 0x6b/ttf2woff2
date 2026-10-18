@@ -346,11 +346,13 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
     }
 }
 
-/// Encode a TTF font as WOFF2 without the `glyf`/`loca` transformation.
+/// Encode a TTF or OTF font as WOFF2 without the `glyf`/`loca` transformation.
 ///
 /// This is the recommended entry point and preserves the original table layout
-/// for decoder compatibility. Only TrueType (TTF) input is supported; OpenType/CFF fonts
-/// return [`Error::UnsupportedFormat`].
+/// for decoder compatibility. Both TrueType (`glyf`-based) and CFF-flavored
+/// OpenType (OTTO) inputs are supported; the WOFF2 specification defines no
+/// transformation for the `CFF` table, so all tables of an OTF font are stored
+/// as-is.
 ///
 /// `quality` selects the Brotli compression quality (0-11); use
 /// [`BrotliQuality::default`] (11) for smallest output, or a lower value for
@@ -358,14 +360,15 @@ impl TryFrom<Encoder<'_>> for Vec<u8> {
 ///
 /// # Errors
 ///
-/// Returns an [`Error`] if the input is not a valid TTF font, a table extends
-/// beyond the input bounds, glyph data is malformed, or Brotli compression fails.
+/// Returns an [`Error`] if the input is not a valid TTF or OTF font, a table
+/// extends beyond the input bounds, glyph data is malformed, or Brotli
+/// compression fails.
 pub fn encode(ttf_data: &[u8], quality: BrotliQuality) -> Result<Vec<u8>, Error> {
     let options = EncodeOptions { quality, ..EncodeOptions::default() };
     Encoder::new(ttf_data, options)?.try_into()
 }
 
-/// Encode a TTF font as WOFF2 with full control over [`EncodeOptions`].
+/// Encode a TTF or OTF font as WOFF2 with full control over [`EncodeOptions`].
 ///
 /// Use this when you need to override defaults — e.g. to enable multi-threaded
 /// Brotli compression via [`EncodeOptions::threads`], or to opt into the
@@ -376,7 +379,7 @@ pub fn encode_with_options(ttf_data: &[u8], options: EncodeOptions) -> Result<Ve
     Encoder::new(ttf_data, options)?.try_into()
 }
 
-/// Encode a TTF font as WOFF2 without applying the `glyf`/`loca` transformation.
+/// Encode a TTF or OTF font as WOFF2 without applying the `glyf`/`loca` transformation.
 ///
 /// Tables are stored as-is before Brotli compression, preserving the original
 /// table layout. This is also the default behavior of [`encode`].
