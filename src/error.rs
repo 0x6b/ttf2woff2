@@ -8,7 +8,7 @@ pub enum Error {
     DataTooShort { context: &'static str },
 
     /// Unsupported font format
-    #[error("Only TrueType fonts (TTF) are supported; OTF/CFF fonts are not supported")]
+    #[error("Unsupported font format: expected TTF (0x00010000) or OTF (OTTO)")]
     UnsupportedFormat,
 
     /// Table extends beyond data bounds

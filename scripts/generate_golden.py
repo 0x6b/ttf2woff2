@@ -13,23 +13,24 @@ FIXTURES_DIR = Path(__file__).parent.parent / "tests" / "fixtures"
 GOLDEN_DIR = FIXTURES_DIR / "golden"
 
 FONTS = [
-    "WarpnineSans-Regular",
-    "NotoSansJP-Medium",
-    "Recursive_VF_1.085",
+    "WarpnineSans-Regular.ttf",
+    "NotoSansJP-Medium.ttf",
+    "Recursive_VF_1.085.ttf",
+    "MinimalCFF-Regular.otf",
 ]
 
 
-def generate_golden_woff2(font_name: str) -> None:
-    ttf_path = FIXTURES_DIR / f"{font_name}.ttf"
-    woff2_path = GOLDEN_DIR / f"{font_name}.woff2"
+def generate_golden_woff2(font_file: str) -> None:
+    font_path = FIXTURES_DIR / font_file
+    woff2_path = GOLDEN_DIR / f"{Path(font_file).stem}.woff2"
 
     print(f"Generating {woff2_path.name}...")
 
-    font = TTFont(ttf_path)
+    font = TTFont(font_path)
     font.flavor = "woff2"
     font.save(woff2_path)
 
-    ttf_size = ttf_path.stat().st_size
+    ttf_size = font_path.stat().st_size
     woff2_size = woff2_path.stat().st_size
     compression = (1.0 - woff2_size / ttf_size) * 100
 

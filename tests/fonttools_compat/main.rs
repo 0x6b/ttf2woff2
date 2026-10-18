@@ -6,6 +6,7 @@
 use std::{fs::read, path::PathBuf};
 
 mod base128;
+mod cff;
 mod compression_quality;
 mod glyf_transform;
 mod large_fonts;

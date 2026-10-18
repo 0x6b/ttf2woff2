@@ -1,4 +1,8 @@
-//! A Pure Rust library for compressing TTF fonts to WOFF2 format.
+//! A Pure Rust library for compressing TTF and OTF fonts to WOFF2 format.
+//!
+//! Both TrueType (`glyf`-based) and CFF-flavored OpenType (OTTO) inputs are
+//! supported. The WOFF2 specification defines no transformation for the `CFF`
+//! table, so CFF data is stored as-is and only Brotli-compressed.
 //!
 //! ## Example
 //!
